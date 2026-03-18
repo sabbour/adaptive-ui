@@ -22,7 +22,8 @@ adaptive-ui/
 ├── adaptive-ui-framework/          # Core framework + built-in components
 │   └── packs/core/                 # @sabbour/adaptive-ui-core
 ├── demos/
-│   └── adaptive-ui-solution-architect/  # AI Solution Architect coworker app
+│   ├── adaptive-ui-solution-architect/  # AI Solution Architect coworker app
+│   └── adaptive-ui-trip-notebook/       # AI Travel Notebook trip planning app
 └── packs/
     ├── adaptive-ui-azure-pack/     # Azure cloud pack (ARM, MSAL, Bicep)
     ├── adaptive-ui-github-pack/    # GitHub pack (OAuth, repos, PRs)
@@ -42,6 +43,7 @@ adaptive-ui/
 | [adaptive-ui-google-maps-pack](https://github.com/sabbour/adaptive-ui-google-maps-pack) | `@sabbour/adaptive-ui-google-maps-pack` | Maps + Places |
 | [adaptive-ui-travel-data-pack](https://github.com/sabbour/adaptive-ui-travel-data-pack) | `@sabbour/adaptive-ui-travel-data-pack` | Travel data (weather, currency) |
 | [adaptive-ui-solution-architect](https://github.com/sabbour/adaptive-ui-solution-architect) | — | Solution Architect demo app |
+| [adaptive-ui-trip-notebook](https://github.com/sabbour/adaptive-ui-trip-notebook) | — | Travel Notebook demo app |
 
 ## Local Development
 

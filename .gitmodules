@@ -19,3 +19,6 @@
 [submodule "packs/adaptive-ui-travel-data-pack"]
 	path = packs/adaptive-ui-travel-data-pack
 	url = https://github.com/sabbour/adaptive-ui-travel-data-pack.git
+[submodule "demos/adaptive-ui-trip-notebook"]
+	path = demos/adaptive-ui-trip-notebook
+	url = https://github.com/sabbour/adaptive-ui-trip-notebook.git
