@@ -1,0 +1,21 @@
+[submodule "adaptive-ui-framework"]
+	path = adaptive-ui-framework
+	url = https://github.com/sabbour/adaptive-ui-framework.git
+[submodule "demos/adaptive-ui-solution-architect"]
+	path = demos/adaptive-ui-solution-architect
+	url = https://github.com/sabbour/adaptive-ui-solution-architect.git
+[submodule "packs/adaptive-ui-azure-pack"]
+	path = packs/adaptive-ui-azure-pack
+	url = https://github.com/sabbour/adaptive-ui-azure-pack.git
+[submodule "packs/adaptive-ui-github-pack"]
+	path = packs/adaptive-ui-github-pack
+	url = https://github.com/sabbour/adaptive-ui-github-pack.git
+[submodule "packs/adaptive-ui-google-flights-pack"]
+	path = packs/adaptive-ui-google-flights-pack
+	url = https://github.com/sabbour/adaptive-ui-google-flights-pack.git
+[submodule "packs/adaptive-ui-google-maps-pack"]
+	path = packs/adaptive-ui-google-maps-pack
+	url = https://github.com/sabbour/adaptive-ui-google-maps-pack.git
+[submodule "packs/adaptive-ui-travel-data-pack"]
+	path = packs/adaptive-ui-travel-data-pack
+	url = https://github.com/sabbour/adaptive-ui-travel-data-pack.git
