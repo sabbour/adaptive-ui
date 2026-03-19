@@ -4,5 +4,90 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"npm.autoDetect": "off",
+		"typescript.tsc.autoDetect": "off"
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Build All",
+				"type": "shell",
+				"command": "bash build-all.sh",
+				"group": {
+					"kind": "build",
+					"isDefault": true
+				},
+				"problemMatcher": ["$tsc"],
+				"presentation": {
+					"reveal": "always",
+					"panel": "new"
+				}
+			},
+			{
+				"label": "Start: Trip Notebook",
+				"type": "shell",
+				"command": "bash start-app.sh trip-notebook",
+				"isBackground": true,
+				"problemMatcher": {
+					"pattern": {
+						"regexp": "^$"
+					},
+					"background": {
+						"activeOnStart": true,
+						"beginsPattern": "^Starting",
+						"endsPattern": "Local:\\s+http"
+					}
+				},
+				"presentation": {
+					"reveal": "always",
+					"panel": "dedicated"
+				}
+			},
+			{
+				"label": "Start: Solution Architect",
+				"type": "shell",
+				"command": "bash start-app.sh solution-architect",
+				"isBackground": true,
+				"problemMatcher": {
+					"pattern": {
+						"regexp": "^$"
+					},
+					"background": {
+						"activeOnStart": true,
+						"beginsPattern": "^Starting",
+						"endsPattern": "Local:\\s+http"
+					}
+				},
+				"presentation": {
+					"reveal": "always",
+					"panel": "dedicated"
+				}
+			}
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Launch: Trip Notebook",
+				"type": "chrome",
+				"request": "launch",
+				"url": "http://localhost:5173",
+				"webRoot": "${workspaceFolder}/demos/adaptive-ui-trip-notebook/src",
+				"preLaunchTask": "Start: Trip Notebook",
+				"runtimeExecutable": "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+			},
+			{
+				"name": "Launch: Solution Architect",
+				"type": "chrome",
+				"request": "launch",
+				"url": "http://localhost:5173",
+				"webRoot": "${workspaceFolder}/demos/adaptive-ui-solution-architect/src",
+				"preLaunchTask": "Start: Solution Architect",
+				"runtimeExecutable": "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+			}
+		]
+	}
 }

@@ -1,0 +1,62 @@
+name: Update Submodules
+
+on:
+  schedule:
+    # Run daily at 06:00 UTC
+    - cron: "0 6 * * *"
+  # Allow submodule repos to trigger immediately via repository_dispatch
+  repository_dispatch:
+    types: [submodule-updated]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update all submodules to latest
+        run: git submodule update --remote --merge
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "### Updated submodules:" >> "$GITHUB_STEP_SUMMARY"
+            git diff --name-only >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Create pull request
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="auto/update-submodules"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add -A
+          git commit -m "chore: update submodule pointers"
+          git push -f origin "$BRANCH"
+
+          # Update existing PR or create a new one
+          if gh pr view "$BRANCH" --json state -q .state 2>/dev/null | grep -q OPEN; then
+            echo "PR already exists, branch updated."
+          else
+            gh pr create \
+              --title "chore: update submodule pointers" \
+              --body "Automated submodule pointer update. Run \`git submodule update --init\` after merging." \
+              --base main \
+              --head "$BRANCH"
+          fi

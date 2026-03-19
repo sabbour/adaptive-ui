@@ -1,0 +1,30 @@
+name: Integration Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Allow submodule repos to trigger this workflow
+  repository_dispatch:
+    types: [submodule-updated]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://npm.pkg.github.com
+
+      - name: Full-stack build
+        run: bash build-all.sh
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
