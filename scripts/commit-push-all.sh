@@ -30,7 +30,7 @@ for repo in "${REPOS[@]}"; do
   echo ""
   echo "=== $repo ==="
 
-  if [ ! -d "$dir/.git" ]; then
+  if [ ! -d "$dir/.git" ] && [ ! -f "$dir/.git" ]; then
     echo "  ⚠ Not a git repo, skipping"
     continue
   fi
