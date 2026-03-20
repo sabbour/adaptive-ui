@@ -22,3 +22,6 @@
 [submodule "demos/adaptive-ui-trip-notebook"]
 	path = demos/adaptive-ui-trip-notebook
 	url = https://github.com/sabbour/adaptive-ui-trip-notebook.git
+[submodule "demos/adaptive-ui-try-aks"]
+	path = demos/adaptive-ui-try-aks
+	url = https://github.com/sabbour/adaptive-ui-try-aks.git
