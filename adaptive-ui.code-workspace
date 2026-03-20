@@ -64,6 +64,26 @@
 					"reveal": "always",
 					"panel": "dedicated"
 				}
+			},
+			{
+				"label": "Start: Deploy on AKS",
+				"type": "shell",
+				"command": "bash start-app.sh try-aks",
+				"isBackground": true,
+				"problemMatcher": {
+					"pattern": {
+						"regexp": "^$"
+					},
+					"background": {
+						"activeOnStart": true,
+						"beginsPattern": "^Starting",
+						"endsPattern": "Local:\\s+http"
+					}
+				},
+				"presentation": {
+					"reveal": "always",
+					"panel": "dedicated"
+				}
 			}
 		]
 	},
@@ -86,7 +106,15 @@
 				"url": "http://localhost:5173",
 				"webRoot": "${workspaceFolder}/demos/adaptive-ui-solution-architect/src",
 				"preLaunchTask": "Start: Solution Architect",
-				}
+				},
+			{
+				"name": "Launch: Deploy on AKS",
+				"type": "chrome",
+				"request": "launch",
+				"url": "http://localhost:5173",
+				"webRoot": "${workspaceFolder}/demos/adaptive-ui-try-aks/src",
+				"preLaunchTask": "Start: Deploy on AKS"
+			}
 		]
 	}
 }

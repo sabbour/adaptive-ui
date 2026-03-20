@@ -65,7 +65,16 @@ npx tsc -b
 npx vite build
 echo "✓ solution-architect build passed"
 
-# ── Done ───────────────────────────────────
+echo ""
+echo "=== adaptive-ui-try-aks ==="
+cd "$BASE/demos/adaptive-ui-try-aks"
+npm install --legacy-peer-deps
+npm link @sabbour/adaptive-ui-core @sabbour/adaptive-ui-azure-pack @sabbour/adaptive-ui-github-pack
+npx tsc -b
+npx vite build
+echo "✓ try-aks build passed"
+
+# ── Done ─────────────────────────────────────
 echo ""
 echo "========================================="
 echo "  All builds passed!"
@@ -74,3 +83,4 @@ echo ""
 echo "To run a demo:"
 echo "  cd demos/adaptive-ui-trip-notebook && npm run dev"
 echo "  cd demos/adaptive-ui-solution-architect && npm run dev"
+echo "  cd demos/adaptive-ui-try-aks && npm run dev"

@@ -6,6 +6,7 @@ BASE="$(cd "$(dirname "$0")" && pwd)"
 APPS=(
   "trip-notebook:demos/adaptive-ui-trip-notebook"
   "solution-architect:demos/adaptive-ui-solution-architect"
+  "try-aks:demos/adaptive-ui-try-aks"
 )
 
 usage() {

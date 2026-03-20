@@ -1,0 +1,1 @@
+{"root":["./src/ArchitectureDiagram.tsx","./src/TryAksApp.tsx","./src/diagram-builder.ts","./src/k8s-validator.ts","./src/main.tsx","./src/safeguards-checker.ts","./src/vite-env.d.ts"],"version":"5.6.3"}
