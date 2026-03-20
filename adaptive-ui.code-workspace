@@ -77,7 +77,7 @@
 				"url": "http://localhost:5173",
 				"webRoot": "${workspaceFolder}/demos/adaptive-ui-trip-notebook/src",
 				"preLaunchTask": "Start: Trip Notebook",
-				"runtimeExecutable": "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+	
 			},
 			{
 				"name": "Launch: Solution Architect",
@@ -86,8 +86,7 @@
 				"url": "http://localhost:5173",
 				"webRoot": "${workspaceFolder}/demos/adaptive-ui-solution-architect/src",
 				"preLaunchTask": "Start: Solution Architect",
-				"runtimeExecutable": "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-			}
+				}
 		]
 	}
 }
