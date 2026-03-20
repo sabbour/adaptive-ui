@@ -48,7 +48,7 @@ done
 echo ""
 echo "=== adaptive-ui-trip-notebook ==="
 cd "$BASE/demos/adaptive-ui-trip-notebook"
-npm link @sabbour/adaptive-ui-core @sabbour/adaptive-ui-travel-data-pack @sabbour/adaptive-ui-google-maps-pack @sabbour/adaptive-ui-google-flights-pack
+rm -rf node_modules package-lock.json
 npm install --legacy-peer-deps
 npm link @sabbour/adaptive-ui-core @sabbour/adaptive-ui-travel-data-pack @sabbour/adaptive-ui-google-maps-pack @sabbour/adaptive-ui-google-flights-pack
 npx tsc -b
@@ -58,7 +58,7 @@ echo "✓ trip-notebook build passed"
 echo ""
 echo "=== adaptive-ui-solution-architect ==="
 cd "$BASE/demos/adaptive-ui-solution-architect"
-npm link @sabbour/adaptive-ui-core @sabbour/adaptive-ui-azure-pack @sabbour/adaptive-ui-github-pack
+rm -rf node_modules package-lock.json
 npm install --legacy-peer-deps
 npm link @sabbour/adaptive-ui-core @sabbour/adaptive-ui-azure-pack @sabbour/adaptive-ui-github-pack
 npx tsc -b
