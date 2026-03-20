@@ -9,6 +9,11 @@
       "route": "/solution-architect",
       "redirect": "/solution-architect/",
       "statusCode": 302
+    },
+    {
+      "route": "/try-aks",
+      "redirect": "/try-aks/",
+      "statusCode": 302
     }
   ],
   "navigationFallback": {

@@ -26,7 +26,8 @@ adaptive-ui/
 │   └── packs/core/                 # @sabbour/adaptive-ui-core
 ├── demos/
 │   ├── adaptive-ui-solution-architect/  # AI Solution Architect coworker app
-│   └── adaptive-ui-trip-notebook/       # AI Travel Notebook trip planning app
+│   ├── adaptive-ui-trip-notebook/       # AI Travel Notebook trip planning app
+│   └── adaptive-ui-try-aks/             # Deploy on AKS deployment experience
 └── packs/
     ├── adaptive-ui-azure-pack/     # Azure cloud pack (ARM, MSAL, Bicep)
     ├── adaptive-ui-github-pack/    # GitHub pack (OAuth, repos, PRs)
@@ -47,6 +48,7 @@ adaptive-ui/
 | [adaptive-ui-travel-data-pack](https://github.com/sabbour/adaptive-ui-travel-data-pack) | `@sabbour/adaptive-ui-travel-data-pack` | Travel data (weather, currency) |
 | [adaptive-ui-solution-architect](https://github.com/sabbour/adaptive-ui-solution-architect) | — | Solution Architect demo app |
 | [adaptive-ui-trip-notebook](https://github.com/sabbour/adaptive-ui-trip-notebook) | — | Travel Notebook demo app |
+| [adaptive-ui-try-aks](https://github.com/sabbour/adaptive-ui-try-aks) | — | Deploy on AKS demo app |
 
 ## Local Development
 
