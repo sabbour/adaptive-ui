@@ -1,4 +1,8 @@
 {
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["trip-notebook/*", "solution-architect/*"]
+  },
   "routes": [
     {
       "route": "/trip-notebook",
@@ -9,10 +13,14 @@
       "route": "/solution-architect",
       "redirect": "/solution-architect/",
       "statusCode": 302
+    },
+    {
+      "route": "/trip-notebook/*",
+      "rewrite": "/trip-notebook/index.html"
+    },
+    {
+      "route": "/solution-architect/*",
+      "rewrite": "/solution-architect/index.html"
     }
-  ],
-  "navigationFallback": {
-    "rewrite": "/index.html",
-    "exclude": ["*.{css,js,svg,png,jpg,jpeg,gif,ico,woff,woff2,ttf,eot,json,map,webp,txt,xml}"]
-  }
+  ]
 }
