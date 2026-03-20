@@ -9,20 +9,10 @@
       "route": "/solution-architect",
       "redirect": "/solution-architect/",
       "statusCode": 302
-    },
-    {
-      "route": "/trip-notebook/*",
-      "rewrite": "/trip-notebook/index.html"
-    },
-    {
-      "route": "/solution-architect/*",
-      "rewrite": "/solution-architect/index.html"
     }
   ],
-  "responseOverrides": {
-    "404": {
-      "rewrite": "/index.html",
-      "statusCode": 200
-    }
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["*.{css,js,svg,png,jpg,jpeg,gif,ico,woff,woff2,ttf,eot,json,map,webp,txt,xml}"]
   }
 }
