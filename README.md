@@ -1,5 +1,8 @@
 # Adaptive UI
 
+[![Integration Build](https://github.com/sabbour/adaptive-ui/actions/workflows/integration.yml/badge.svg)](https://github.com/sabbour/adaptive-ui/actions/workflows/integration.yml)
+[![Deploy](https://github.com/sabbour/adaptive-ui/actions/workflows/deploy-swa.yml/badge.svg)](https://github.com/sabbour/adaptive-ui/actions/workflows/deploy-swa.yml)
+
 Parent workspace for the Adaptive UI project. Uses git submodules to bring together the framework, extension packs, and demo apps.
 
 ## Quick Start
