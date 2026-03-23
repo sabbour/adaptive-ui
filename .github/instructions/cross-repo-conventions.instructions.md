@@ -44,3 +44,13 @@ description: "Cross-repo conventions for pack development, tool/picker/query pat
 
 - `max_completion_tokens` defaults to 16384. Diagrams can consume 300-500 output tokens.
 - Only include diagrams when the architecture changes — not on every step.
+
+## LLM System Prompt & Component Registry
+
+The LLM only knows about components that are documented in the system prompt. When adding or modifying components:
+
+- **Built-in components** are documented in `ADAPTIVE_UI_SYSTEM_PROMPT` in `adaptive-ui-framework/packs/core/src/llm-adapter.ts` under the "Component types:" section. Every built-in component registered in `registerBuiltinComponents()` in `builtins.tsx` MUST have a corresponding entry in this prompt. If you add a new built-in component, add it to the prompt too.
+- **Pack components** are documented in each pack's `systemPrompt` string (e.g., `AZURE_SYSTEM_PROMPT` in the Azure pack's `index.ts`, `GITHUB_SYSTEM_PROMPT` in the GitHub pack's `index.ts`). When adding a new pack component, document it in the pack's system prompt with full prop examples.
+- **Component format in the prompt**: `componentName(prop1,prop2?:default,prop3?:[{label,value}] — brief description of what it does)`
+- **Selection rules to include**: When to use `select` vs `combobox` vs `radioGroup` vs `questionnaire` — document thresholds (e.g., ≤5 options → radioGroup; ≥6 → select/combobox; multi-step intake → questionnaire).
+- **Intent mode**: Components used in Intent mode go in the `INTENT_SYSTEM_PROMPT` under the `ASK` section. Add `component: {type:"component",component:"name",props:{}}` entries for pack components that the LLM should be able to use in intent responses.
