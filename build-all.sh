@@ -49,6 +49,7 @@ echo ""
 echo "=== adaptive-ui-trip-notebook ==="
 cd "$BASE/demos/adaptive-ui-trip-notebook"
 rm -rf node_modules package-lock.json
+npm link @sabbour/adaptive-ui-core @sabbour/adaptive-ui-travel-data-pack @sabbour/adaptive-ui-google-maps-pack @sabbour/adaptive-ui-google-flights-pack
 npm install --legacy-peer-deps
 npm link @sabbour/adaptive-ui-core @sabbour/adaptive-ui-travel-data-pack @sabbour/adaptive-ui-google-maps-pack @sabbour/adaptive-ui-google-flights-pack
 npx tsc -b
@@ -59,6 +60,7 @@ echo ""
 echo "=== adaptive-ui-solution-architect ==="
 cd "$BASE/demos/adaptive-ui-solution-architect"
 rm -rf node_modules package-lock.json
+npm link @sabbour/adaptive-ui-core @sabbour/adaptive-ui-azure-pack @sabbour/adaptive-ui-github-pack
 npm install --legacy-peer-deps
 npm link @sabbour/adaptive-ui-core @sabbour/adaptive-ui-azure-pack @sabbour/adaptive-ui-github-pack
 npx tsc -b
@@ -68,6 +70,8 @@ echo "✓ solution-architect build passed"
 echo ""
 echo "=== adaptive-ui-try-aks ==="
 cd "$BASE/demos/adaptive-ui-try-aks"
+rm -rf node_modules package-lock.json
+npm link @sabbour/adaptive-ui-core @sabbour/adaptive-ui-azure-pack @sabbour/adaptive-ui-github-pack
 npm install --legacy-peer-deps
 npm link @sabbour/adaptive-ui-core @sabbour/adaptive-ui-azure-pack @sabbour/adaptive-ui-github-pack
 npx tsc -b
