@@ -1,5 +1,9 @@
 # Adaptive UI
 
+<p align="center">
+  <img src="assets/logo.svg" alt="Adaptive UI" width="480" />
+</p>
+
 [![Integration Build](https://github.com/sabbour/adaptive-ui/actions/workflows/integration.yml/badge.svg)](https://github.com/sabbour/adaptive-ui/actions/workflows/integration.yml)
 [![Deploy](https://github.com/sabbour/adaptive-ui/actions/workflows/deploy-swa.yml/badge.svg)](https://github.com/sabbour/adaptive-ui/actions/workflows/deploy-swa.yml)
 

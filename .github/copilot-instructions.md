@@ -50,6 +50,38 @@ Each subdirectory is a **separate git repo** (submodule). They are independently
 - The `api/` folder is deployed as the SWA managed Functions backend (CORS proxy).
 - Commits use `user.name="Ahmed Sabbour"` and `user.email="sabbour@outlook.com"`.
 
+## Publishing & Version Coordination
+
+All packages are published to **GitHub Packages** (`@sabbour` scope). Versions must be coordinated because packs declare `@sabbour/adaptive-ui-core` as a `peerDependency`.
+
+**Dependency chain**: `adaptive-ui-core` → packs (azure, github, flights, maps, travel-data) → demo apps.
+
+**Automated publishing** — use the coordinated publish script:
+```bash
+# Bump all packages (patch/minor/major), publish, update deps
+bash scripts/publish-all.sh patch
+bash scripts/publish-all.sh minor
+```
+
+The script handles the full sequence:
+1. Bumps `@sabbour/adaptive-ui-core` version, tags, pushes → triggers publish workflow
+2. Waits for the package to appear on GitHub Packages
+3. Bumps all 5 packs with updated `peerDependencies`, tags, pushes → triggers publish
+4. Waits for all packs to publish
+5. Updates demo app `package.json` dependencies, commits, pushes
+6. Updates parent workspace submodule pointers
+
+**Manual publishing** — if you need to publish a single package:
+1. Bump `version` in `package.json`
+2. If it's a pack, also update `peerDependencies["@sabbour/adaptive-ui-core"]` to match the published core version
+3. Commit, tag with `v<version>`, push with `--tags`
+4. The `publish.yml` workflow triggers on `v*` tags
+5. After publishing, update any downstream `package.json` files that reference the package
+
+**Common issue**: `ERESOLVE` peer dependency conflict in CI — means a pack's `peerDependencies` version doesn't match the installed core version. Fix by publishing the pack with an updated peer dep range. Demo CI workflows use `--legacy-peer-deps` as a safety net.
+
+**Never re-publish an existing version** — GitHub Packages returns 409 Conflict. Always bump the version number.
+
 ## API Proxy (CORS)
 
 All external API calls that hit CORS (Azure ARM auth, GitHub OAuth, Azure pricing, Google Flights) go through an **Azure Functions proxy** in `api/`.
