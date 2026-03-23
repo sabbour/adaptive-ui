@@ -27,9 +27,10 @@ jobs:
       - name: Stage static site output
         run: |
           rm -rf _site
-          mkdir -p _site/trip-notebook _site/solution-architect
+          mkdir -p _site/trip-notebook _site/solution-architect _site/try-aks
           cp -R demos/adaptive-ui-trip-notebook/dist/. _site/trip-notebook/
           cp -R demos/adaptive-ui-solution-architect/dist/. _site/solution-architect/
+          cp -R demos/adaptive-ui-try-aks/dist/. _site/try-aks/
           cp staticwebapp.config.json _site/staticwebapp.config.json
           cp swa/index.html _site/index.html
 
@@ -40,5 +41,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
           app_location: "_site"
+          api_location: "api"
           output_location: ""
           skip_app_build: true
+          skip_api_build: false

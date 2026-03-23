@@ -8,7 +8,7 @@ description: "Cross-repo conventions for pack development, tool/picker/query pat
 ## Tools vs Components vs Pickers
 
 - **Tools** = read-only queries the LLM calls during inference (before generating UI). Use ONLY when the LLM needs to SEE the data to make decisions.
-- **Picker components** = client-side dropdowns that fetch and display API data at render time. The LLM never sees the data. Use for ANY selection list. Always auto-paginate. Always register intent resolvers for common picks.
+- **Picker components** = client-side dropdowns that fetch and display API data at render time. The LLM never sees the data. Use for ANY selection list. Always auto-paginate.
 - **Query components** = client-side API callers for write operations with user confirmation. Use for POST/PUT/DELETE mutations only.
 - **Tool descriptions must NOT mention listing for selection.** If a tool's description says "list repos/regions/SKUs", the LLM will call it instead of using the picker.
 - **ANTI-PATTERN: Using tools to fetch lists for selection.** Use a picker component instead — data stays client-side, zero token cost.
@@ -25,8 +25,7 @@ description: "Cross-repo conventions for pack development, tool/picker/query pat
 
 - **Base prompts must be cloud-agnostic.** Never hardcode provider-specific services in the framework system prompt. Use generic terms.
 - **Provider-specific guidance belongs in pack system prompts.** Azure-specific IaC (Bicep), diagram icons, CLI commands go in the Azure pack's `AZURE_SYSTEM_PROMPT`.
-- **Intent resolvers only fire in Intent mode.** In Adaptive mode, the LLM follows the pack system prompt directly. Document picker components with full prop examples.
-- `"next"` field in intents must be factual data summaries, NOT agent prose.
+- **In Adaptive mode, the LLM follows the pack system prompt directly.** Document picker components with full prop examples.
 - Components belong in `"ask"`, NEVER in `"show"`. Show is display-only.
 
 ## Pack Registration & Settings
@@ -45,6 +44,21 @@ description: "Cross-repo conventions for pack development, tool/picker/query pat
 - `max_completion_tokens` defaults to 16384. Diagrams can consume 300-500 output tokens.
 - Only include diagrams when the architecture changes — not on every step.
 
+## API Proxy (CORS)
+
+- All external API calls that hit CORS go through the Azure Functions proxy in `api/`.
+- Pack code MUST use `/api/` prefixed paths, never direct external URLs.
+- Proxy routes: `/api/auth-proxy` (Azure AD), `/api/github-oauth/*` (GitHub OAuth), `/api/pricing-proxy` (Azure pricing), `/api/gflights-proxy` (Google Flights).
+- The proxy function in `api/src/functions/proxy.ts` has an allowlist of targets — no open redirect.
+- **Local dev**: Vite proxies `/api` → `http://localhost:7071` (Azure Functions dev server).
+- **Production**: SWA natively routes `/api/*` to the managed Functions backend.
+- When adding a new external API that needs CORS bypass, add a target to the proxy allowlist AND update the Vite config is NOT needed (single `/api` proxy handles all routes).
+
+## GitHub Pack — Personal vs Org Accounts
+
+- The `githubPicker` stores `__githubOrgIsPersonal: 'true'` when a personal account is selected.
+- The `githubQuery` component auto-rewrites `POST /orgs/<user>/repos` → `POST /user/repos` for personal accounts.
+
 ## LLM System Prompt & Component Registry
 
 The LLM only knows about components that are documented in the system prompt. When adding or modifying components:
@@ -53,4 +67,3 @@ The LLM only knows about components that are documented in the system prompt. Wh
 - **Pack components** are documented in each pack's `systemPrompt` string (e.g., `AZURE_SYSTEM_PROMPT` in the Azure pack's `index.ts`, `GITHUB_SYSTEM_PROMPT` in the GitHub pack's `index.ts`). When adding a new pack component, document it in the pack's system prompt with full prop examples.
 - **Component format in the prompt**: `componentName(prop1,prop2?:default,prop3?:[{label,value}] — brief description of what it does)`
 - **Selection rules to include**: When to use `select` vs `combobox` vs `radioGroup` vs `questionnaire` — document thresholds (e.g., ≤5 options → radioGroup; ≥6 → select/combobox; multi-step intake → questionnaire).
-- **Intent mode**: Components used in Intent mode go in the `INTENT_SYSTEM_PROMPT` under the `ASK` section. Add `component: {type:"component",component:"name",props:{}}` entries for pack components that the LLM should be able to use in intent responses.

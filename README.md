@@ -24,6 +24,7 @@ git submodule update --init --recursive
 adaptive-ui/
 ├── adaptive-ui-framework/          # Core framework + built-in components
 │   └── packs/core/                 # @sabbour/adaptive-ui-core
+├── api/                            # Azure Functions API proxy (CORS bypass)
 ├── demos/
 │   ├── adaptive-ui-solution-architect/  # AI Solution Architect coworker app
 │   ├── adaptive-ui-trip-notebook/       # AI Travel Notebook trip planning app
@@ -53,6 +54,18 @@ adaptive-ui/
 ## Local Development
 
 Each pack is its own npm package published to GitHub Packages. For local development across repos, use `npm link`:
+
+```bash
+# Full build (framework → packs → api → demos)
+bash build-all.sh
+
+# Start a demo app (API backend starts automatically)
+bash start-app.sh try-aks
+bash start-app.sh solution-architect
+bash start-app.sh trip-notebook
+```
+
+For linking local packs during development:
 
 ```bash
 # Register a pack for linking

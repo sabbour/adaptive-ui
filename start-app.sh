@@ -41,6 +41,21 @@ if [[ -z "$TARGET" ]]; then
   usage
 fi
 
+# ── Start API backend (Azure Functions) ──
+echo "Starting API backend (Azure Functions)..."
+cd "$BASE/api"
+npm run build 2>/dev/null || true
+npx func start --port 7071 &
+API_PID=$!
+echo "API backend started (PID $API_PID) on http://localhost:7071"
+
+# Ensure API process is stopped when the script exits
+trap "echo 'Stopping API backend...'; kill $API_PID 2>/dev/null" EXIT INT TERM
+
+# Wait briefly for Functions runtime to initialize
+sleep 2
+
+# ── Start the demo app ──
 echo "Starting $1 ($TARGET)..."
 cd "$BASE/$TARGET"
 npm run dev

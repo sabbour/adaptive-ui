@@ -1,0 +1,19 @@
+{
+  "name": "adaptive-ui-api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/src/functions/*.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "func start",
+    "dev": "npm run build && func start --port 7071"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0",
+    "azure-functions-core-tools": "^4.0.0"
+  }
+}

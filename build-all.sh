@@ -44,7 +44,15 @@ for pack in "${PACKS[@]}"; do
   echo "✓ $pack typecheck passed & linked"
 done
 
-# ── 3. Demos ───────────────────────────────
+# ── 3. API (Azure Functions) ───────────────
+echo ""
+echo "=== api (Azure Functions proxy) ==="
+cd "$BASE/api"
+npm install
+npx tsc
+echo "✓ api build passed"
+
+# ── 4. Demos ───────────────────────────────
 echo ""
 echo "=== adaptive-ui-trip-notebook ==="
 cd "$BASE/demos/adaptive-ui-trip-notebook"
@@ -84,7 +92,7 @@ echo "========================================="
 echo "  All builds passed!"
 echo "========================================="
 echo ""
-echo "To run a demo:"
-echo "  cd demos/adaptive-ui-trip-notebook && npm run dev"
-echo "  cd demos/adaptive-ui-solution-architect && npm run dev"
-echo "  cd demos/adaptive-ui-try-aks && npm run dev"
+echo "To run a demo (API backend starts automatically):"
+echo "  bash start-app.sh trip-notebook"
+echo "  bash start-app.sh solution-architect"
+echo "  bash start-app.sh try-aks"
