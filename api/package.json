@@ -2,7 +2,7 @@
   "name": "adaptive-ui-api",
   "version": "1.0.0",
   "private": true,
-  "main": "dist/src/functions/*.js",
+  "main": "dist/functions/*.js",
   "scripts": {
     "build": "tsc",
     "start": "func start",
