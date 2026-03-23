@@ -34,6 +34,15 @@ jobs:
           cp staticwebapp.config.json _site/staticwebapp.config.json
           cp swa/index.html _site/index.html
 
+      - name: Prepare API output
+        run: |
+          mkdir -p _api
+          cp api/host.json _api/host.json
+          cp api/package.json _api/package.json
+          cp api/package-lock.json _api/package-lock.json
+          cp -R api/dist _api/dist
+          cd _api && npm install --omit=dev
+
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
@@ -41,7 +50,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
           app_location: "_site"
-          api_location: "api"
+          api_location: "_api"
           output_location: ""
           skip_app_build: true
-          skip_api_build: false
+          skip_api_build: true
