@@ -1,6 +1,6 @@
 # Adaptive UI
 
-<p align="center">
+<p align="left">
   <img src="assets/logo.svg" alt="Adaptive UI" width="480" />
 </p>
 
