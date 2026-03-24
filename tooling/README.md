@@ -5,7 +5,7 @@ This folder contains reusable workspace automation for multi-repo projects.
 ## Files
 
 - workspace-manifest.yaml: single source of truth for repo graph, build order, and release order.
-- workspacectl.mjs: command-line tool that drives doctor, contract, build, start, release, sync, and provision flows.
+- workspacectl.mjs: command-line tool that drives doctor, contract, build, start, release, sync, commit-sync, and provision flows.
 
 ## Command Runbook
 
@@ -29,8 +29,24 @@ Run these from the parent workspace root.
 - npm run sync -- --dry-run --create-pr
 - npm run sync -- --create-pr
 
-5. Infrastructure provisioning
+5. Commit submodules then open parent sync PR
+- npm run commit-sync -- --dry-run
+- npm run commit-sync
+
+6. Infrastructure provisioning
 - npm run provision -- --name <name> --resource-group <rg> --location <region>
+
+## Release vs Sync
+
+- Use `release` for versioned package publishing. It bumps versions, tags repos, publishes packages, updates demo dependencies, and updates parent pointers.
+- Use `sync --create-pr` when submodule commits already exist and you only need the parent pointer PR.
+- Use `commit-sync` when local submodule changes exist and you want one command to commit/push submodules, then run `sync --create-pr`.
+
+## Publish Triggers
+
+- Framework and pack publish workflows trigger on tag pushes matching `v*`.
+- The release command pushes tags per repository in sequence.
+- There is no single cross-repo tag. Each repository gets its own tag with the same version string.
 
 ## Doctor Warning Cleanup
 
