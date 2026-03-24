@@ -22,6 +22,7 @@ REPOS=(
   packs/adaptive-ui-travel-data-pack
   demos/adaptive-ui-solution-architect
   demos/adaptive-ui-trip-notebook
+  demos/adaptive-ui-try-aks
   .
 )
 
