@@ -81,14 +81,32 @@ update_dep() {
 
 wait_for_package() {
   local pkg="$1" version="$2" max_wait="${3:-600}"
-  local registry="https://npm.pkg.github.com"
+  # Extract the bare package name (e.g. @sabbour/adaptive-ui-core → adaptive-ui-core)
+  local bare_name="${pkg#*/}"
+  local repo="sabbour/$bare_name"
   local elapsed=0
-  log "Waiting for $pkg@$version to appear on GitHub Packages (timeout ${max_wait}s)..."
+  log "Waiting for $pkg@$version publish workflow to complete (timeout ${max_wait}s)..."
   while [ $elapsed -lt $max_wait ]; do
-    # Use npm view to check if the version exists
-    if npm view "$pkg@$version" version --registry "$registry" 2>/dev/null | grep -q "$version"; then
-      ok "$pkg@$version is published (after ${elapsed}s)"
-      return 0
+    # Check the latest publish workflow run for this version
+    local result
+    result=$(GH_PAGER=cat gh run list --repo "$repo" --workflow publish.yml --limit 5 \
+      --json status,conclusion,displayTitle \
+      --jq '.[] | select(.displayTitle | contains("'"$version"'"))' 2>/dev/null || echo "")
+    if [ -n "$result" ]; then
+      local conclusion
+      conclusion=$(echo "$result" | head -1 | grep -o '"conclusion":"[^"]*"' | head -1 | cut -d'"' -f4)
+      local status
+      status=$(echo "$result" | head -1 | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+      if [ "$conclusion" = "success" ]; then
+        echo ""
+        ok "$pkg@$version published (after ${elapsed}s)"
+        return 0
+      elif [ "$conclusion" = "failure" ] || [ "$conclusion" = "cancelled" ]; then
+        echo ""
+        err "$pkg@$version workflow $conclusion"
+        return 1
+      fi
+      # Still in progress
     fi
     sleep 10
     elapsed=$((elapsed + 10))
