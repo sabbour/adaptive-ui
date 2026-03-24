@@ -23,40 +23,22 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update all submodules to latest
-        run: git submodule update --remote --merge
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-      - name: Check for changes
-        id: changes
+      - name: Install control plane dependencies
         run: |
-          if git diff --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          if [ -f package-lock.json ]; then
+            npm ci
           else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "### Updated submodules:" >> "$GITHUB_STEP_SUMMARY"
-            git diff --name-only >> "$GITHUB_STEP_SUMMARY"
+            npm install
           fi
 
-      - name: Create pull request
-        if: steps.changes.outputs.changed == 'true'
+      - name: Sync submodules and open PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH="auto/update-submodules"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$BRANCH"
-          git add -A
-          git commit -m "chore: update submodule pointers"
-          git push -f origin "$BRANCH"
-
-          # Update existing PR or create a new one
-          if gh pr view "$BRANCH" --json state -q .state 2>/dev/null | grep -q OPEN; then
-            echo "PR already exists, branch updated."
-          else
-            gh pr create \
-              --title "chore: update submodule pointers" \
-              --body "Automated submodule pointer update. Run \`git submodule update --init\` after merging." \
-              --base main \
-              --head "$BRANCH"
-          fi
+          node tooling/workspacectl.mjs sync --create-pr --branch auto/update-submodules --base main

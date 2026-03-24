@@ -48,7 +48,7 @@ Each subdirectory is a **separate git repo** (submodule). They are independently
 - Packs publish to GitHub Packages via `publish.yml` on `v*` tags.
 - The parent workspace deploys to Azure Static Web Apps via `deploy-swa.yml`.
 - The `api/` folder is deployed as the SWA managed Functions backend (CORS proxy).
-- Commits use `user.name="Ahmed Sabbour"` and `user.email="sabbour@outlook.com"`.
+- Commits should use the developer's configured local git identity (`git config user.name`, `git config user.email`).
 
 ## Publishing & Version Coordination
 
@@ -56,11 +56,21 @@ All packages are published to **GitHub Packages** (`@sabbour` scope). Versions m
 
 **Dependency chain**: `adaptive-ui-core` → packs (azure, github, flights, maps, travel-data) → demo apps.
 
-**Automated publishing** — use the coordinated publish script:
+**Automated publishing** — use the coordinated control-plane command:
 ```bash
 # Bump all packages (patch/minor/major), publish, update deps
-bash scripts/publish-all.sh patch
-bash scripts/publish-all.sh minor
+npm run release -- patch
+npm run release -- minor
+```
+
+**Contract validation** — run before integration/deploy:
+```bash
+npm run contract
+```
+
+**Submodule pointer synchronization** — update and open PR from parent workspace:
+```bash
+npm run sync -- --create-pr
 ```
 
 The script handles the full sequence:
@@ -89,16 +99,44 @@ All external API calls that hit CORS (Azure ARM auth, GitHub OAuth, Azure pricin
 - All pack code uses `/api/` prefixed paths (e.g., `/api/auth-proxy`, `/api/github-oauth/device/code`, `/api/pricing-proxy`, `/api/gflights-proxy`).
 - **Local dev**: Vite proxies `/api` → `http://localhost:7071` (Azure Functions dev server).
 - **Production**: SWA natively routes `/api/*` to the managed Functions backend.
-- `start-app.sh` automatically starts both the Functions backend and the Vite dev server.
+- `npm run start -- <app-name>` automatically starts both the Functions backend and the Vite dev server.
 
 ## Local Development
 
 ```bash
 # Full build (framework → packs → api → demos)
-bash build-all.sh
+npm run build
 
 # Start a demo (API backend starts automatically)
-bash start-app.sh try-aks
-bash start-app.sh solution-architect
-bash start-app.sh trip-notebook
+npm run start -- try-aks
+npm run start -- solution-architect
+npm run start -- trip-notebook
 ```
+
+## Agent Runbook (Control Plane)
+
+The workspace automation entrypoint is `tooling/workspacectl.mjs` with manifest `tooling/workspace-manifest.yaml`.
+
+When operating in this workspace, use this order:
+
+1. `npm run doctor` — environment/auth/branch/dirty checks
+2. `npm run contract` — cross-repo dependency contract validation
+3. `npm run build` — full build
+
+Use these commands by scenario:
+
+- Local app dev: `npm run start -- <app-name>`
+- Coordinated release preview: `npm run release -- patch --dry-run`
+- Coordinated release: `npm run release -- <patch|minor|major>`
+- Submodule sync preview: `npm run sync -- --dry-run --create-pr`
+- Submodule sync PR: `npm run sync -- --create-pr`
+- SWA provisioning: `npm run provision -- --name <name> --resource-group <rg> --location <region>`
+
+## Prompt Catalog (Agent-Facing)
+
+Use these workspace prompts in `.github/prompts/`:
+
+- `workspace-router.prompt.md` — routes ambiguous workspace intents to the right operational prompt.
+- `workspace-ops.prompt.md` — maps user intent to doctor/contract/build/start/release/sync/provision commands.
+- `workspace-warning-cleanup.prompt.md` — handles doctor warning triage and pre-release/pre-sync cleanup.
+- `workspace-release-checklist.prompt.md` — enforces a go/no-go release checklist with preview-first execution rules.

@@ -16,9 +16,27 @@
 		"version": "2.0.0",
 		"tasks": [
 			{
+				"label": "Doctor",
+				"type": "shell",
+				"command": "npm run doctor",
+				"presentation": {
+					"reveal": "always",
+					"panel": "shared"
+				}
+			},
+			{
+				"label": "Contract",
+				"type": "shell",
+				"command": "npm run contract",
+				"presentation": {
+					"reveal": "always",
+					"panel": "shared"
+				}
+			},
+			{
 				"label": "Build All",
 				"type": "shell",
-				"command": "bash build-all.sh",
+				"command": "node tooling/workspacectl.mjs build",
 				"group": {
 					"kind": "build",
 					"isDefault": true
@@ -26,13 +44,13 @@
 				"problemMatcher": ["$tsc"],
 				"presentation": {
 					"reveal": "always",
-					"panel": "new"
+					"panel": "dedicated"
 				}
 			},
 			{
 				"label": "Start: Trip Notebook",
 				"type": "shell",
-				"command": "bash start-app.sh trip-notebook",
+				"command": "node tooling/workspacectl.mjs start trip-notebook",
 				"isBackground": true,
 				"problemMatcher": {
 					"pattern": {
@@ -52,7 +70,7 @@
 			{
 				"label": "Start: Solution Architect",
 				"type": "shell",
-				"command": "bash start-app.sh solution-architect",
+				"command": "node tooling/workspacectl.mjs start solution-architect",
 				"isBackground": true,
 				"problemMatcher": {
 					"pattern": {
@@ -84,9 +102,9 @@
 				}
 			},
 			{
-				"label": "Start: Deploy on AKS",
+				"label": "Start: Try AKS",
 				"type": "shell",
-				"command": "bash start-app.sh try-aks",
+				"command": "node tooling/workspacectl.mjs start try-aks",
 				"isBackground": true,
 				"problemMatcher": {
 					"pattern": {
@@ -101,6 +119,33 @@
 				"presentation": {
 					"reveal": "always",
 					"panel": "dedicated"
+				}
+			},
+			{
+				"label": "Release: Patch Dry Run",
+				"type": "shell",
+				"command": "npm run release -- patch --dry-run",
+				"presentation": {
+					"reveal": "always",
+					"panel": "shared"
+				}
+			},
+			{
+				"label": "Sync: Dry Run",
+				"type": "shell",
+				"command": "npm run sync -- --dry-run --create-pr",
+				"presentation": {
+					"reveal": "always",
+					"panel": "shared"
+				}
+			},
+			{
+				"label": "Sync: Create PR",
+				"type": "shell",
+				"command": "npm run sync -- --create-pr",
+				"presentation": {
+					"reveal": "always",
+					"panel": "shared"
 				}
 			}
 		]
@@ -126,12 +171,12 @@
 				"preLaunchTask": "Start: Solution Architect",
 				},
 			{
-				"name": "Launch: Deploy on AKS",
+				"name": "Launch: Try AKS",
 				"type": "chrome",
 				"request": "launch",
 				"url": "http://localhost:5174",
 				"webRoot": "${workspaceFolder}/demos/adaptive-ui-try-aks/src",
-				"preLaunchTask": "Start: Deploy on AKS"
+				"preLaunchTask": "Start: Try AKS"
 			}
 		]
 	}

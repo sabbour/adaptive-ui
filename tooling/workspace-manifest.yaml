@@ -1,0 +1,81 @@
+schemaVersion: 1
+workspace: adaptive-ui
+defaultBranch: main
+packageManager: npm
+node:
+  major: 22
+repos:
+  - id: adaptive-ui-framework
+    path: adaptive-ui-framework
+    type: framework
+    build: npx tsc -b --noEmit
+  - id: adaptive-ui-azure-pack
+    path: packs/adaptive-ui-azure-pack
+    type: pack
+    dependsOn:
+      - adaptive-ui-framework
+    build: npx tsc -b --noEmit
+  - id: adaptive-ui-github-pack
+    path: packs/adaptive-ui-github-pack
+    type: pack
+    dependsOn:
+      - adaptive-ui-framework
+    build: npx tsc -b --noEmit
+  - id: adaptive-ui-google-flights-pack
+    path: packs/adaptive-ui-google-flights-pack
+    type: pack
+    dependsOn:
+      - adaptive-ui-framework
+    build: npx tsc -b --noEmit
+  - id: adaptive-ui-google-maps-pack
+    path: packs/adaptive-ui-google-maps-pack
+    type: pack
+    dependsOn:
+      - adaptive-ui-framework
+    build: npx tsc -b --noEmit
+  - id: adaptive-ui-travel-data-pack
+    path: packs/adaptive-ui-travel-data-pack
+    type: pack
+    dependsOn:
+      - adaptive-ui-framework
+    build: npx tsc -b --noEmit
+  - id: api
+    path: api
+    type: api
+    build: npx tsc
+  - id: adaptive-ui-solution-architect
+    path: demos/adaptive-ui-solution-architect
+    type: demo
+    dependsOn:
+      - adaptive-ui-framework
+      - adaptive-ui-azure-pack
+      - adaptive-ui-github-pack
+    build: npx tsc -b && npx vite build
+  - id: adaptive-ui-trip-notebook
+    path: demos/adaptive-ui-trip-notebook
+    type: demo
+    dependsOn:
+      - adaptive-ui-framework
+      - adaptive-ui-google-flights-pack
+      - adaptive-ui-google-maps-pack
+      - adaptive-ui-travel-data-pack
+    build: npx tsc -b && npx vite build
+  - id: adaptive-ui-try-aks
+    path: demos/adaptive-ui-try-aks
+    type: demo
+    dependsOn:
+      - adaptive-ui-framework
+      - adaptive-ui-azure-pack
+      - adaptive-ui-github-pack
+    build: npx tsc -b && npx vite build
+release:
+  order:
+    - adaptive-ui-framework
+    - adaptive-ui-azure-pack
+    - adaptive-ui-github-pack
+    - adaptive-ui-google-flights-pack
+    - adaptive-ui-google-maps-pack
+    - adaptive-ui-travel-data-pack
+    - adaptive-ui-solution-architect
+    - adaptive-ui-trip-notebook
+    - adaptive-ui-try-aks

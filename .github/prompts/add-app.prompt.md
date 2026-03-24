@@ -102,15 +102,19 @@ export default defineConfig({
   server: {
     host: true,
     open: true,
-    // Add proxy rules if any registered packs need them:
-    // - Azure pack needs /auth-proxy → https://login.microsoftonline.com
-    // - GitHub pack needs /github-oauth/* → https://github.com
-    // - Google Flights pack needs /gflights-proxy → https://www.google.com
+    // All CORS-sensitive pack traffic goes through the shared API proxy.
+    // Keep a single /api proxy target for local development.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:7071',
+        changeOrigin: true,
+      },
+    },
   },
 });
 ```
 
-Add proxy rules matching the packs used. Copy proxy configs from the reference apps.
+Use the shared `/api` proxy regardless of selected packs.
 
 ### 5. `demos/adaptive-ui-$APP_SLUG/index.html`
 
@@ -195,34 +199,23 @@ Optionally include a CSS theme file at `src/css/$APP_SLUG-theme.css` if the app 
 
 ## Build & Start Integration
 
-After creating the app files, update these workspace-level scripts:
+After creating the app files, update these workspace-level control-plane files:
 
-### 9. Update `build-all.sh`
+### 9. Update `tooling/workspacectl.mjs`
 
-Add a new section in the `# ── 3. Demos ──` area, before the `# ── Done ──` block. Use links-before-install pattern:
+Add the new app to the `demos` array inside the `build()` command:
 
-```bash
-echo ""
-echo "=== adaptive-ui-$APP_SLUG ==="
-cd "$BASE/demos/adaptive-ui-$APP_SLUG"
-npm link @sabbour/adaptive-ui-core <plus any pack dependencies>
-npm install --legacy-peer-deps
-npm link @sabbour/adaptive-ui-core <plus any pack dependencies>
-npx tsc -b
-npx vite build
-echo "✓ $APP_SLUG build passed"
+```javascript
+{
+  dir: 'adaptive-ui-$APP_SLUG',
+  links: `${corePackageName} <plus selected pack package names>`,
+}
 ```
 
-The `npm link` lines must list `@sabbour/adaptive-ui-core` plus every `@sabbour/adaptive-ui-*-pack` in the app's `dependencies`. The link is done BEFORE and AFTER `npm install` because:
-- Before: prevents npm from trying to fetch unpublished packages from the registry
-- After: `npm install` may overwrite the symlinks
+Update the `apps` mapping inside the `start()` command:
 
-### 10. Update `start-app.sh`
-
-Add a new entry to the `APPS` array:
-
-```bash
-"$APP_SLUG:demos/adaptive-ui-$APP_SLUG"
+```javascript
+'$APP_SLUG': 'demos/adaptive-ui-$APP_SLUG'
 ```
 
 ### 11. Update `.vscode/tasks.json` (via `adaptive-ui.code-workspace`)
@@ -233,7 +226,7 @@ Add a new task in `adaptive-ui.code-workspace`:
 {
   "label": "Start: $APP_LABEL",
   "type": "shell",
-  "command": "bash start-app.sh $APP_SLUG",
+  "command": "node tooling/workspacectl.mjs start $APP_SLUG",
   "isBackground": true
 }
 ```
@@ -245,7 +238,7 @@ And a launch configuration:
   "name": "Launch: $APP_LABEL",
   "type": "chrome",
   "request": "launch",
-  "url": "http://localhost:5173",
+  "url": "http://localhost:5174",
   "webRoot": "${workspaceFolder}/demos/adaptive-ui-$APP_SLUG/src",
   "preLaunchTask": "Start: $APP_LABEL"
 }
@@ -258,4 +251,4 @@ And a launch configuration:
 - Sensitive state keys start with `__` — filtered from LLM context.
 - API keys go in `localStorage` with module-level getters, never in adaptive state.
 - All pack components with `useEffect` API calls MUST guard with `if (disabled) return;`.
-- Run the "Build All" task to verify the full workspace builds.
+- Run `npm run build` to verify the full workspace builds.
