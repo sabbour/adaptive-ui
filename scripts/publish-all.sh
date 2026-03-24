@@ -80,10 +80,8 @@ update_dep() {
 }
 
 wait_for_package() {
-  local pkg="$1" version="$2" max_wait="${3:-600}"
-  # Extract the bare package name (e.g. @sabbour/adaptive-ui-core → adaptive-ui-core)
-  local bare_name="${pkg#*/}"
-  local repo="sabbour/$bare_name"
+  local pkg="$1" version="$2" repo_name="$3" max_wait="${4:-600}"
+  local repo="sabbour/$repo_name"
   local elapsed=0
   log "Waiting for $pkg@$version publish workflow to complete (timeout ${max_wait}s)..."
   while [ $elapsed -lt $max_wait ]; do
@@ -163,7 +161,7 @@ git_commit_tag_push "$BASE/adaptive-ui-framework" "chore: bump to $CORE_VERSION"
 # ─── Step 2: Wait for core to publish ───
 
 log "Step 2: Waiting for core package to publish..."
-wait_for_package "@sabbour/adaptive-ui-core" "$CORE_VERSION" 600
+wait_for_package "@sabbour/adaptive-ui-core" "$CORE_VERSION" "adaptive-ui-framework" 600
 
 # ─── Step 3: Bump all packs with updated peer dep ───
 
@@ -200,7 +198,7 @@ log "Step 4: Waiting for packs to publish..."
 for pack in "${PACKS[@]}"; do
   PACK_VER="${PACK_VERSIONS[$pack]}"
   PKG_NAME="@sabbour/$pack"
-  wait_for_package "$PKG_NAME" "$PACK_VER" 600 || true
+  wait_for_package "$PKG_NAME" "$PACK_VER" "$pack" 600 || true
 done
 
 # ─── Step 5: Update demo dependencies ───
