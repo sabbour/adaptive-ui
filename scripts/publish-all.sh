@@ -80,18 +80,18 @@ update_dep() {
 }
 
 wait_for_package() {
-  local pkg="$1" version="$2" max_wait="${3:-120}"
+  local pkg="$1" version="$2" max_wait="${3:-600}"
   local registry="https://npm.pkg.github.com"
   local elapsed=0
-  log "Waiting for $pkg@$version to appear on GitHub Packages..."
+  log "Waiting for $pkg@$version to appear on GitHub Packages (timeout ${max_wait}s)..."
   while [ $elapsed -lt $max_wait ]; do
     # Use npm view to check if the version exists
     if npm view "$pkg@$version" version --registry "$registry" 2>/dev/null | grep -q "$version"; then
-      ok "$pkg@$version is published"
+      ok "$pkg@$version is published (after ${elapsed}s)"
       return 0
     fi
-    sleep 5
-    elapsed=$((elapsed + 5))
+    sleep 10
+    elapsed=$((elapsed + 10))
     printf "."
   done
   echo ""
@@ -145,7 +145,7 @@ git_commit_tag_push "$BASE/adaptive-ui-framework" "chore: bump to $CORE_VERSION"
 # ─── Step 2: Wait for core to publish ───
 
 log "Step 2: Waiting for core package to publish..."
-wait_for_package "@sabbour/adaptive-ui-core" "$CORE_VERSION" 180
+wait_for_package "@sabbour/adaptive-ui-core" "$CORE_VERSION" 600
 
 # ─── Step 3: Bump all packs with updated peer dep ───
 
@@ -182,7 +182,7 @@ log "Step 4: Waiting for packs to publish..."
 for pack in "${PACKS[@]}"; do
   PACK_VER="${PACK_VERSIONS[$pack]}"
   PKG_NAME="@sabbour/$pack"
-  wait_for_package "$PKG_NAME" "$PACK_VER" 180 || true
+  wait_for_package "$PKG_NAME" "$PACK_VER" 600 || true
 done
 
 # ─── Step 5: Update demo dependencies ───
