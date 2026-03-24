@@ -826,6 +826,7 @@ function sync(options) {
 
 function commitSync(options) {
   const manifest = loadManifest();
+  const defaultBranch = String(manifest.defaultBranch || "main");
   const dryRun = Boolean(options["dry-run"]);
   const branch = String(options.branch || "auto/update-submodules");
   const baseBranch = String(options.base || "main");
@@ -867,10 +868,15 @@ function commitSync(options) {
 
   for (const repo of dirtyRepos) {
     console.log(`Committing ${repo.repoPath}`);
+    const currentBranch = run("git rev-parse --abbrev-ref HEAD", repo.repoDir, true);
+    if (currentBranch === "HEAD") {
+      runInherit(`git checkout ${defaultBranch}`, repo.repoDir);
+    }
     runInherit("git add -A", repo.repoDir);
     try {
       runInherit(`git commit -m \"${commitMessage.replace(/\"/g, "\\\\\"")}\"`, repo.repoDir);
-      runInherit("git push", repo.repoDir);
+      const pushBranch = run("git rev-parse --abbrev-ref HEAD", repo.repoDir, true);
+      runInherit(`git push origin ${pushBranch}`, repo.repoDir);
     } catch {
       console.log(`No commit created in ${repo.repoPath}`);
     }
