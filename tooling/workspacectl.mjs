@@ -824,6 +824,61 @@ function sync(options) {
   }
 }
 
+function commitSync(options) {
+  const manifest = loadManifest();
+  const dryRun = Boolean(options["dry-run"]);
+  const branch = String(options.branch || "auto/update-submodules");
+  const baseBranch = String(options.base || "main");
+  const commitMessage = String(options.message || "chore: commit pending workspace changes");
+
+  const repos = (manifest.repos || [])
+    .map((repo) => repo.path)
+    .filter((repoPath) => repoPath !== "api");
+
+  const dirtyRepos = [];
+  for (const repoPath of repos) {
+    const repoDir = path.join(BASE, repoPath);
+    if (!fs.existsSync(repoDir)) {
+      continue;
+    }
+    const gitDir = path.join(repoDir, ".git");
+    if (!fs.existsSync(gitDir)) {
+      continue;
+    }
+    const dirty = run("git status --porcelain", repoDir, true);
+    if (dirty) {
+      dirtyRepos.push({ repoPath, repoDir });
+    }
+  }
+
+  if (dryRun) {
+    console.log("[dry-run] commit-sync preview");
+    if (dirtyRepos.length === 0) {
+      console.log("[dry-run] No dirty submodule repos detected.");
+    } else {
+      console.log("[dry-run] Dirty repos to commit/push:");
+      for (const repo of dirtyRepos) {
+        console.log(`- ${repo.repoPath}`);
+      }
+    }
+    console.log(`[dry-run] Would run: sync --create-pr --branch ${branch} --base ${baseBranch}`);
+    return;
+  }
+
+  for (const repo of dirtyRepos) {
+    console.log(`Committing ${repo.repoPath}`);
+    runInherit("git add -A", repo.repoDir);
+    try {
+      runInherit(`git commit -m \"${commitMessage.replace(/\"/g, "\\\\\"")}\"`, repo.repoDir);
+      runInherit("git push", repo.repoDir);
+    } catch {
+      console.log(`No commit created in ${repo.repoPath}`);
+    }
+  }
+
+  sync({ "create-pr": true, branch, base: baseBranch });
+}
+
 function parseProvisionArgs(options) {
   const required = ["name", "resource-group", "location"];
   for (const key of required) {
@@ -955,6 +1010,7 @@ function usage() {
   console.log("  start <trip-notebook|solution-architect|try-aks>");
   console.log("  release <patch|minor|major> [--dry-run] [--max-wait <seconds>] [--json]");
   console.log("  sync [--dry-run] [--create-pr] [--branch <name>] [--base <main>] [--json]");
+  console.log("  commit-sync [--message <commit-message>] [--branch <name>] [--base <main>] [--dry-run]");
   console.log("  provision --name <swa> --resource-group <rg> --location <region> [--subscription <id>] [--sku <Free|Standard>] [--domain <fqdn>] [--dns-zone-id <id> | --dns-zone-rg <rg> --dns-zone-name <zone>]");
 }
 
@@ -993,6 +1049,10 @@ function main() {
   }
   if (command === "sync") {
     sync(options);
+    return;
+  }
+  if (command === "commit-sync") {
+    commitSync(options);
     return;
   }
   if (command === "provision") {

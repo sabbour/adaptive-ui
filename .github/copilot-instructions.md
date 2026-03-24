@@ -128,9 +128,22 @@ Use these commands by scenario:
 - Local app dev: `npm run start -- <app-name>`
 - Coordinated release preview: `npm run release -- patch --dry-run`
 - Coordinated release: `npm run release -- <patch|minor|major>`
+- Commit dirty submodules, push, then open parent sync PR: `npm run commit-sync`
 - Submodule sync preview: `npm run sync -- --dry-run --create-pr`
 - Submodule sync PR: `npm run sync -- --create-pr`
 - SWA provisioning: `npm run provision -- --name <name> --resource-group <rg> --location <region>`
+
+### Release vs Sync Guidance
+
+- `release` is for versioned package publishing. It bumps versions, tags repos, publishes packages, updates demos, and updates parent pointers.
+- `sync --create-pr` is pointer-only. Use it when submodule commits already exist and you only need the parent submodule pointer PR.
+- `commit-sync` is the maintenance shortcut when local submodule changes exist. It commits/pushes dirty submodules, then runs `sync --create-pr`.
+
+### Publish Triggers
+
+- Framework and pack publish workflows trigger on `push` tags matching `v*`.
+- The release command pushes those tags per repo in sequence.
+- There is no single cross-repo tag; each repo receives its own tag with the same version string.
 
 ## Prompt Catalog (Agent-Facing)
 
