@@ -8,6 +8,33 @@ import { parse as parseYaml } from "yaml";
 
 const BASE = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const MANIFEST_PATH = path.join(BASE, "tooling", "workspace-manifest.yaml");
+let cachedCommandEnv = null;
+
+function getCommandEnv() {
+  if (cachedCommandEnv) {
+    return cachedCommandEnv;
+  }
+
+  const env = { ...process.env };
+  if (!env.NODE_AUTH_TOKEN) {
+    try {
+      const token = execSync("gh auth token", {
+        cwd: BASE,
+        stdio: ["ignore", "pipe", "pipe"],
+      })
+        .toString()
+        .trim();
+      if (token) {
+        env.NODE_AUTH_TOKEN = token;
+      }
+    } catch {
+      // Ignore. npm may still work if auth is configured via .npmrc.
+    }
+  }
+
+  cachedCommandEnv = env;
+  return cachedCommandEnv;
+}
 
 function loadManifest() {
   const raw = fs.readFileSync(MANIFEST_PATH, "utf8");
@@ -18,12 +45,12 @@ function run(cmd, cwd = BASE, silent = false) {
   if (!silent) {
     console.log(`$ ${cmd}`);
   }
-  return execSync(cmd, { cwd, stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
+  return execSync(cmd, { cwd, stdio: ["ignore", "pipe", "pipe"], env: getCommandEnv() }).toString().trim();
 }
 
 function runInherit(cmd, cwd = BASE) {
   console.log(`$ ${cmd}`);
-  execSync(cmd, { cwd, stdio: "inherit" });
+  execSync(cmd, { cwd, stdio: "inherit", env: getCommandEnv() });
 }
 
 function hasCommand(cmd) {
@@ -92,7 +119,7 @@ function readPackageJson(repoPath) {
 function npmInstall(cwd, useLegacyPeerDeps = false) {
   const lockfile = path.join(cwd, "package-lock.json");
   if (fs.existsSync(lockfile)) {
-    runInherit("npm ci", cwd);
+    runInherit(useLegacyPeerDeps ? "npm ci --legacy-peer-deps" : "npm ci", cwd);
     return;
   }
   runInherit(useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install", cwd);
