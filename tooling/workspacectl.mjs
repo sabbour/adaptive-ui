@@ -118,11 +118,19 @@ function readPackageJson(repoPath) {
 
 function npmInstall(cwd, useLegacyPeerDeps = false) {
   const lockfile = path.join(cwd, "package-lock.json");
+  const installCmd = useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install";
   if (fs.existsSync(lockfile)) {
-    runInherit(useLegacyPeerDeps ? "npm ci --legacy-peer-deps" : "npm ci", cwd);
-    return;
+    try {
+      runInherit(useLegacyPeerDeps ? "npm ci --legacy-peer-deps" : "npm ci", cwd);
+      return;
+    } catch {
+      // npm ci can fail with cross-platform lockfiles (e.g. missing
+      // @rollup/rollup-linux-x64-gnu when lockfile was generated on Windows).
+      // Fall back to npm install which resolves platform-specific deps.
+      console.log("npm ci failed, falling back to npm install");
+    }
   }
-  runInherit(useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install", cwd);
+  runInherit(installCmd, cwd);
 }
 
 function ensureGitIdentity() {
