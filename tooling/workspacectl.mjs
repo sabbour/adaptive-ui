@@ -117,9 +117,15 @@ function readPackageJson(repoPath) {
 }
 
 function npmInstall(cwd, useLegacyPeerDeps = false) {
-  // Always use `npm install` instead of `npm ci` because npm ci silently
-  // skips platform-specific optional deps (e.g. @rollup/rollup-linux-x64-gnu)
-  // when the lockfile was generated on a different OS.
+  // In CI, remove lockfile so npm install resolves platform-specific optional
+  // deps (e.g. @rollup/rollup-linux-x64-gnu) that are missing when the
+  // lockfile was generated on a different OS (npm issue #4828).
+  if (process.env.CI) {
+    const lockfile = path.join(cwd, "package-lock.json");
+    if (fs.existsSync(lockfile)) {
+      fs.unlinkSync(lockfile);
+    }
+  }
   runInherit(useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install", cwd);
 }
 
