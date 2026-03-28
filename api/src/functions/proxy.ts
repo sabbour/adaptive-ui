@@ -228,7 +228,7 @@ const ALLOWED_TARGETS: Record<string, { target: string; rewrite: (path: string) 
   },
   '/api/gflights-proxy': {
     target: 'https://www.google.com',
-    rewrite: (p) => p.replace(/^\/api\/gflights-proxy/, ''),
+    rewrite: (p) => p.replace(/^\/api\/gflights-proxy\/?/, '').replace(/^https:\/\/www\.google\.com/, ''),
   },
 };
 
