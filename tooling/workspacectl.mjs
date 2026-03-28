@@ -117,14 +117,17 @@ function readPackageJson(repoPath) {
 }
 
 function npmInstall(cwd, useLegacyPeerDeps = false) {
-  // In CI, remove lockfile so npm install resolves platform-specific optional
-  // deps (e.g. @rollup/rollup-linux-x64-gnu) that are missing when the
-  // lockfile was generated on a different OS (npm issue #4828).
+  // In CI, remove lockfile AND node_modules so npm install resolves
+  // platform-specific optional deps (e.g. @rollup/rollup-linux-x64-gnu)
+  // that are missing when the lockfile was generated on a different OS
+  // (npm issue #4828). node_modules must also be removed because npm link
+  // populates it before npmInstall runs, causing npm install to skip
+  // resolution ("up to date") and miss the platform-specific binaries.
   if (process.env.CI) {
     const lockfile = path.join(cwd, "package-lock.json");
-    if (fs.existsSync(lockfile)) {
-      fs.unlinkSync(lockfile);
-    }
+    if (fs.existsSync(lockfile)) fs.unlinkSync(lockfile);
+    const nodeModules = path.join(cwd, "node_modules");
+    if (fs.existsSync(nodeModules)) fs.rmSync(nodeModules, { recursive: true, force: true });
   }
   runInherit(useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install", cwd);
 }
