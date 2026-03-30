@@ -128,10 +128,16 @@ function readPackageJson(repoPath) {
 }
 
 function npmInstall(cwd, useLegacyPeerDeps = false) {
-  // Keep the lockfile intact — deleting it causes npm to do full resolution
-  // which triggers a destructure bug with --legacy-peer-deps after npm link.
-  // The lockfile guides npm to use known-good resolutions, avoiding crashes.
-  runInherit(useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install", cwd);
+  // Use npm ci for reproducible installs when a lockfile exists and we don't
+  // need --legacy-peer-deps (e.g. the api/ package). Fall back to
+  // npm install --legacy-peer-deps for packages that go through npm link,
+  // where npm ci would fail on missing @sabbour/* registry entries.
+  const hasLockfile = fs.existsSync(path.join(cwd, "package-lock.json"));
+  if (hasLockfile && !useLegacyPeerDeps) {
+    runInherit("npm ci", cwd);
+  } else {
+    runInherit(useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install", cwd);
+  }
 }
 
 /**
