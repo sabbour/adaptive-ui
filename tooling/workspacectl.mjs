@@ -117,19 +117,14 @@ function readPackageJson(repoPath) {
 }
 
 function npmInstall(cwd, useLegacyPeerDeps = false) {
-  // In CI, remove lockfile and force-install so npm resolves platform-specific
-  // optional deps (e.g. @rollup/rollup-linux-x64-gnu) that are missing when
-  // the lockfile was generated on a different OS (npm issue #4828).
-  // We keep node_modules intact because npm link has already placed @sabbour/*
-  // symlinks there; --force makes npm re-resolve instead of reporting
-  // "up to date" and skipping the platform-specific binaries.
+  // In CI, remove lockfile so npm install resolves platform-specific optional
+  // deps (e.g. @rollup/rollup-linux-x64-gnu) that are missing when the
+  // lockfile was generated on a different OS (npm issue #4828).
   if (process.env.CI) {
     const lockfile = path.join(cwd, "package-lock.json");
     if (fs.existsSync(lockfile)) fs.unlinkSync(lockfile);
   }
-  const flags = [useLegacyPeerDeps ? "--legacy-peer-deps" : "", process.env.CI ? "--force" : ""]
-    .filter(Boolean).join(" ");
-  runInherit(`npm install ${flags}`.trim(), cwd);
+  runInherit(useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install", cwd);
 }
 
 function ensureGitIdentity() {
@@ -504,6 +499,17 @@ function build() {
     runInherit(`npm link ${demo.links}`, demoDir);
     npmInstall(demoDir, true);
     runInherit(`npm link ${demo.links}`, demoDir);
+    // In CI, npm link brings in rollup without the platform-specific native
+    // binding (e.g. @rollup/rollup-linux-x64-gnu) because the transitive
+    // install skips optional deps for the wrong OS. Re-installing rollup
+    // forces npm to resolve the correct native binding for this platform.
+    if (process.env.CI) {
+      const rollupDir = path.join(demoDir, "node_modules", "rollup");
+      if (fs.existsSync(rollupDir)) {
+        const rpkg = JSON.parse(fs.readFileSync(path.join(rollupDir, "package.json"), "utf8"));
+        runInherit(`npm install rollup@${rpkg.version} --legacy-peer-deps`, demoDir);
+      }
+    }
     runInherit("npx tsc -b", demoDir);
     runInherit("npx vite build", demoDir);
   }
