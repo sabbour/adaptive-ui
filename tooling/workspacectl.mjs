@@ -134,7 +134,7 @@ function fixRollupPlatformDeps(cwd) {
   const rollupPkg = path.join(cwd, "node_modules", "rollup", "package.json");
   if (!fs.existsSync(rollupPkg)) return;
   const { version } = JSON.parse(fs.readFileSync(rollupPkg, "utf8"));
-  runInherit(`npm install rollup@${version} --no-save`, cwd);
+  runInherit(`npm install rollup@${version} --no-save --legacy-peer-deps`, cwd);
 }
 
 function ensureGitIdentity() {
