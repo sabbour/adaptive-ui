@@ -117,21 +117,24 @@ function readPackageJson(repoPath) {
 }
 
 function npmInstall(cwd, useLegacyPeerDeps = false) {
-  // In CI, remove lockfile so npm install resolves platform-specific optional
-  // deps (e.g. @rollup/rollup-linux-x64-gnu) that are missing when the
-  // lockfile was generated on a different OS (npm issue #4828).
-  // Also use --force instead of --legacy-peer-deps in CI: both ignore peer dep
-  // conflicts, but --legacy-peer-deps hits an npm destructure bug when
-  // node_modules has been pre-populated by npm link (npm/cli#4828).
-  // --force re-resolves all deps and correctly installs platform-specific
-  // optional deps without the null-reference crash.
-  if (process.env.CI) {
-    const lockfile = path.join(cwd, "package-lock.json");
-    if (fs.existsSync(lockfile)) fs.unlinkSync(lockfile);
-    runInherit("npm install --force", cwd);
-  } else {
-    runInherit(useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install", cwd);
-  }
+  // Keep the lockfile intact — deleting it causes npm to do full resolution
+  // which triggers a destructure bug with --legacy-peer-deps after npm link.
+  // The lockfile guides npm to use known-good resolutions, avoiding crashes.
+  runInherit(useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install", cwd);
+}
+
+/**
+ * In CI, the lockfile was generated on a different OS (Windows/macOS) and
+ * is missing platform-specific optional deps (e.g. @rollup/rollup-linux-x64-gnu).
+ * After npm install, explicitly re-install rollup so npm resolves the correct
+ * native binding for the CI platform.
+ */
+function fixRollupPlatformDeps(cwd) {
+  if (!process.env.CI) return;
+  const rollupPkg = path.join(cwd, "node_modules", "rollup", "package.json");
+  if (!fs.existsSync(rollupPkg)) return;
+  const { version } = JSON.parse(fs.readFileSync(rollupPkg, "utf8"));
+  runInherit(`npm install rollup@${version} --no-save`, cwd);
 }
 
 function ensureGitIdentity() {
@@ -506,6 +509,7 @@ function build() {
     runInherit(`npm link ${demo.links}`, demoDir);
     npmInstall(demoDir, true);
     runInherit(`npm link ${demo.links}`, demoDir);
+    fixRollupPlatformDeps(demoDir);
     runInherit("npx tsc -b", demoDir);
     runInherit("npx vite build", demoDir);
   }
