@@ -10,6 +10,7 @@
     "start": "node tooling/workspacectl.mjs start",
     "release": "node tooling/workspacectl.mjs release",
     "sync": "node tooling/workspacectl.mjs sync",
+    "commit-sync": "node tooling/workspacectl.mjs commit-sync",
     "provision": "node tooling/workspacectl.mjs provision"
   },
   "dependencies": {

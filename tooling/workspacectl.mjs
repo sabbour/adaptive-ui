@@ -1,13 +1,41 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { execSync, spawn } from "node:child_process";
+import { execSync, spawn, spawnSync } from "node:child_process";
 import { parse as parseYaml } from "yaml";
 
 const BASE = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const MANIFEST_PATH = path.join(BASE, "tooling", "workspace-manifest.yaml");
+let cachedCommandEnv = null;
+
+function getCommandEnv() {
+  if (cachedCommandEnv) {
+    return cachedCommandEnv;
+  }
+
+  const env = { ...process.env };
+  if (!env.NODE_AUTH_TOKEN) {
+    try {
+      const token = execSync("gh auth token", {
+        cwd: BASE,
+        stdio: ["ignore", "pipe", "pipe"],
+      })
+        .toString()
+        .trim();
+      if (token) {
+        env.NODE_AUTH_TOKEN = token;
+      }
+    } catch {
+      // Ignore. npm may still work if auth is configured via .npmrc.
+    }
+  }
+
+  cachedCommandEnv = env;
+  return cachedCommandEnv;
+}
 
 function loadManifest() {
   const raw = fs.readFileSync(MANIFEST_PATH, "utf8");
@@ -18,12 +46,22 @@ function run(cmd, cwd = BASE, silent = false) {
   if (!silent) {
     console.log(`$ ${cmd}`);
   }
-  return execSync(cmd, { cwd, stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
+  return execSync(cmd, { cwd, stdio: ["ignore", "pipe", "pipe"], env: getCommandEnv() }).toString().trim();
 }
 
 function runInherit(cmd, cwd = BASE) {
   console.log(`$ ${cmd}`);
-  execSync(cmd, { cwd, stdio: "inherit" });
+  execSync(cmd, { cwd, stdio: "inherit", env: getCommandEnv() });
+}
+
+function runArgs(cmd, args, cwd = BASE) {
+  const display = [cmd, ...args.map((a) => (a.includes(" ") ? `"${a}"` : a))].join(" ");
+  console.log(`$ ${display}`);
+  const result = spawnSync(cmd, args, { cwd, stdio: "inherit", env: getCommandEnv() });
+  if (result.status !== 0) {
+    const detail = result.error ? `: ${result.error.message}` : "";
+    throw new Error(`Command failed: ${display}${detail}`);
+  }
 }
 
 function hasCommand(cmd) {
@@ -90,12 +128,58 @@ function readPackageJson(repoPath) {
 }
 
 function npmInstall(cwd, useLegacyPeerDeps = false) {
-  const lockfile = path.join(cwd, "package-lock.json");
-  if (fs.existsSync(lockfile)) {
+  // Use npm ci for reproducible installs when a lockfile exists and we don't
+  // need --legacy-peer-deps (e.g. the api/ package). Fall back to
+  // npm install --legacy-peer-deps for packages that go through npm link,
+  // where npm ci would fail on missing @sabbour/* registry entries.
+  const hasLockfile = fs.existsSync(path.join(cwd, "package-lock.json"));
+  if (hasLockfile && !useLegacyPeerDeps) {
     runInherit("npm ci", cwd);
-    return;
+  } else {
+    runInherit(useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install", cwd);
   }
-  runInherit(useLegacyPeerDeps ? "npm install --legacy-peer-deps" : "npm install", cwd);
+}
+
+/**
+ * In CI, the lockfile was generated on a different OS (Windows/macOS) and
+ * is missing platform-specific optional deps (e.g. @rollup/rollup-linux-x64-gnu).
+ *
+ * We can't use `npm install rollup@version` because it triggers full tree
+ * resolution which replaces @sabbour/* symlinks with published registry versions.
+ * And we can't just rely on npm link + npm install order because npm link
+ * removes the rollup native binding.
+ *
+ * Solution: download the native binding tarball with `npm pack` and extract it
+ * directly into node_modules — no tree resolution, no side effects.
+ */
+function fixRollupPlatformDeps(cwd) {
+  if (!process.env.CI) return;
+  const rollupPkg = path.join(cwd, "node_modules", "rollup", "package.json");
+  if (!fs.existsSync(rollupPkg)) return;
+  const { optionalDependencies } = JSON.parse(fs.readFileSync(rollupPkg, "utf8"));
+  if (!optionalDependencies) return;
+
+  // Find the native binding for this platform (e.g. @rollup/rollup-linux-x64-gnu)
+  const nativePkg = Object.keys(optionalDependencies).find((name) =>
+    name.includes(process.platform) && name.includes(process.arch)
+  );
+  if (!nativePkg) return;
+
+  const nativeDir = path.join(cwd, "node_modules", ...nativePkg.split("/"));
+  if (fs.existsSync(nativeDir)) return; // already installed
+
+  const version = optionalDependencies[nativePkg];
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rollup-native-"));
+  try {
+    runInherit(`npm pack ${nativePkg}@${version} --pack-destination ${tmpDir}`, cwd);
+    const tarball = fs.readdirSync(tmpDir).find((f) => f.endsWith(".tgz"));
+    if (tarball) {
+      fs.mkdirSync(nativeDir, { recursive: true });
+      runInherit(`tar xzf ${path.join(tmpDir, tarball)} -C ${nativeDir} --strip-components=1`);
+    }
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 }
 
 function ensureGitIdentity() {
@@ -469,7 +553,13 @@ function build() {
     const demoDir = path.join(base, "demos", demo.dir);
     runInherit(`npm link ${demo.links}`, demoDir);
     npmInstall(demoDir, true);
+    // Re-link AFTER npm install — npm install replaces @sabbour/* symlinks
+    // with published registry versions from the lockfile.
     runInherit(`npm link ${demo.links}`, demoDir);
+    // Fix rollup AFTER the final npm link — npm link removes the platform-
+    // specific rollup native binding. fixRollupPlatformDeps uses npm pack +
+    // tar extract (no tree resolution) so it won't touch the @sabbour/* symlinks.
+    fixRollupPlatformDeps(demoDir);
     runInherit("npx tsc -b", demoDir);
     runInherit("npx vite build", demoDir);
   }
@@ -824,6 +914,67 @@ function sync(options) {
   }
 }
 
+function commitSync(options) {
+  const manifest = loadManifest();
+  const defaultBranch = String(manifest.defaultBranch || "main");
+  const dryRun = Boolean(options["dry-run"]);
+  const branch = String(options.branch || "auto/update-submodules");
+  const baseBranch = String(options.base || "main");
+  const commitMessage = String(options.message || "chore: commit pending workspace changes");
+
+  const repos = (manifest.repos || [])
+    .map((repo) => repo.path)
+    .filter((repoPath) => repoPath !== "api");
+
+  const dirtyRepos = [];
+  for (const repoPath of repos) {
+    const repoDir = path.join(BASE, repoPath);
+    if (!fs.existsSync(repoDir)) {
+      continue;
+    }
+    const gitDir = path.join(repoDir, ".git");
+    if (!fs.existsSync(gitDir)) {
+      continue;
+    }
+    const dirty = run("git status --porcelain", repoDir, true);
+    if (dirty) {
+      dirtyRepos.push({ repoPath, repoDir });
+    }
+  }
+
+  if (dryRun) {
+    console.log("[dry-run] commit-sync preview");
+    if (dirtyRepos.length === 0) {
+      console.log("[dry-run] No dirty submodule repos detected.");
+    } else {
+      console.log("[dry-run] Dirty repos to commit/push:");
+      for (const repo of dirtyRepos) {
+        console.log(`- ${repo.repoPath}`);
+      }
+    }
+    console.log(`[dry-run] Would run: sync --create-pr --branch ${branch} --base ${baseBranch}`);
+    return;
+  }
+
+  for (const repo of dirtyRepos) {
+    console.log(`Committing ${repo.repoPath}`);
+    const currentBranch = run("git rev-parse --abbrev-ref HEAD", repo.repoDir, true);
+    if (currentBranch === "HEAD") {
+      runInherit(`git checkout ${defaultBranch}`, repo.repoDir);
+    }
+    runInherit("git add -A", repo.repoDir);
+    try {
+      runArgs("git", ["commit", "-m", commitMessage], repo.repoDir);
+      const pushBranch = run("git rev-parse --abbrev-ref HEAD", repo.repoDir, true);
+      runInherit(`git push origin ${pushBranch}`, repo.repoDir);
+    } catch {
+      console.log(`No commit created in ${repo.repoPath}`);
+    }
+  }
+
+  sync({ "create-pr": true, branch, base: baseBranch });
+}
+
 function parseProvisionArgs(options) {
   const required = ["name", "resource-group", "location"];
   for (const key of required) {
@@ -955,6 +1106,7 @@ function usage() {
   console.log("  start <trip-notebook|solution-architect|try-aks>");
   console.log("  release <patch|minor|major> [--dry-run] [--max-wait <seconds>] [--json]");
   console.log("  sync [--dry-run] [--create-pr] [--branch <name>] [--base <main>] [--json]");
+  console.log("  commit-sync [--message <commit-message>] [--branch <name>] [--base <main>] [--dry-run]");
   console.log("  provision --name <swa> --resource-group <rg> --location <region> [--subscription <id>] [--sku <Free|Standard>] [--domain <fqdn>] [--dns-zone-id <id> | --dns-zone-rg <rg> --dns-zone-name <zone>]");
 }
 
@@ -993,6 +1145,10 @@ function main() {
   }
   if (command === "sync") {
     sync(options);
+    return;
+  }
+  if (command === "commit-sync") {
+    commitSync(options);
     return;
   }
   if (command === "provision") {

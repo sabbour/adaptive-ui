@@ -88,6 +88,7 @@ Use this quick map when you are not sure what to run:
 | Start one demo plus API backend | `npm run start -- <trip-notebook|solution-architect|try-aks>` |
 | Preview release without changing anything | `npm run release -- patch --dry-run` |
 | Publish coordinated release | `npm run release -- <patch|minor|major>` |
+| Commit dirty submodules, push, then open parent sync PR | `npm run commit-sync` |
 | Preview submodule sync + PR action | `npm run sync -- --dry-run --create-pr` |
 | Sync submodules and open parent PR | `npm run sync -- --create-pr` |
 | Provision Static Web App infrastructure | `npm run provision -- --name <name> --resource-group <rg> --location <region>` |
@@ -147,6 +148,25 @@ Preview sync without changes:
 ```bash
 npm run sync -- --dry-run --create-pr
 ```
+
+Commit and sync using the control-plane command:
+
+```bash
+npm run commit-sync -- --dry-run
+npm run commit-sync
+```
+
+## Release vs Sync
+
+- Use `release` when you need to publish package versions. It bumps versions, creates tags, waits for publish workflows, updates demo dependencies, and updates parent pointers.
+- Use `sync --create-pr` when submodule commits already exist and you only need a parent pointer PR.
+- Use `commit-sync` when you have local changes in submodules and want one command to commit/push those repos and then run `sync --create-pr`.
+
+### Publish Trigger Behavior
+
+- Submodule publish workflows run on tag pushes matching `v*`.
+- The release command creates and pushes those tags per repo, so publishing is coordinated by the control-plane but still executed per repository.
+- A release does not create one global tag across all repos. Each repo gets its own same-version tag string.
 
 ## Doctor Warning Cleanup Procedure
 
