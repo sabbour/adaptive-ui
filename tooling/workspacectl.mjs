@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { execSync, spawn } from "node:child_process";
@@ -126,15 +127,43 @@ function npmInstall(cwd, useLegacyPeerDeps = false) {
 /**
  * In CI, the lockfile was generated on a different OS (Windows/macOS) and
  * is missing platform-specific optional deps (e.g. @rollup/rollup-linux-x64-gnu).
- * After npm install, explicitly re-install rollup so npm resolves the correct
- * native binding for the CI platform.
+ *
+ * We can't use `npm install rollup@version` because it triggers full tree
+ * resolution which replaces @sabbour/* symlinks with published registry versions.
+ * And we can't just rely on npm link + npm install order because npm link
+ * removes the rollup native binding.
+ *
+ * Solution: download the native binding tarball with `npm pack` and extract it
+ * directly into node_modules — no tree resolution, no side effects.
  */
 function fixRollupPlatformDeps(cwd) {
   if (!process.env.CI) return;
   const rollupPkg = path.join(cwd, "node_modules", "rollup", "package.json");
   if (!fs.existsSync(rollupPkg)) return;
-  const { version } = JSON.parse(fs.readFileSync(rollupPkg, "utf8"));
-  runInherit(`npm install rollup@${version} --no-save --legacy-peer-deps`, cwd);
+  const { optionalDependencies } = JSON.parse(fs.readFileSync(rollupPkg, "utf8"));
+  if (!optionalDependencies) return;
+
+  // Find the native binding for this platform (e.g. @rollup/rollup-linux-x64-gnu)
+  const nativePkg = Object.keys(optionalDependencies).find((name) =>
+    name.includes(process.platform) && name.includes(process.arch)
+  );
+  if (!nativePkg) return;
+
+  const nativeDir = path.join(cwd, "node_modules", ...nativePkg.split("/"));
+  if (fs.existsSync(nativeDir)) return; // already installed
+
+  const version = optionalDependencies[nativePkg];
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rollup-native-"));
+  try {
+    runInherit(`npm pack ${nativePkg}@${version} --pack-destination ${tmpDir}`, cwd);
+    const tarball = fs.readdirSync(tmpDir).find((f) => f.endsWith(".tgz"));
+    if (tarball) {
+      fs.mkdirSync(nativeDir, { recursive: true });
+      runInherit(`tar xzf ${path.join(tmpDir, tarball)} -C ${nativeDir} --strip-components=1`);
+    }
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 }
 
 function ensureGitIdentity() {
@@ -508,10 +537,13 @@ function build() {
     const demoDir = path.join(base, "demos", demo.dir);
     runInherit(`npm link ${demo.links}`, demoDir);
     npmInstall(demoDir, true);
-    fixRollupPlatformDeps(demoDir);
-    // Re-link AFTER all npm install operations — each npm install can
-    // replace symlinks with published registry versions from the lockfile.
+    // Re-link AFTER npm install — npm install replaces @sabbour/* symlinks
+    // with published registry versions from the lockfile.
     runInherit(`npm link ${demo.links}`, demoDir);
+    // Fix rollup AFTER the final npm link — npm link removes the platform-
+    // specific rollup native binding. fixRollupPlatformDeps uses npm pack +
+    // tar extract (no tree resolution) so it won't touch the @sabbour/* symlinks.
+    fixRollupPlatformDeps(demoDir);
     runInherit("npx tsc -b", demoDir);
     runInherit("npx vite build", demoDir);
   }
