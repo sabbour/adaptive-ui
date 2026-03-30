@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { execSync, spawn } from "node:child_process";
+import { execSync, spawn, spawnSync } from "node:child_process";
 import { parse as parseYaml } from "yaml";
 
 const BASE = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -52,6 +52,16 @@ function run(cmd, cwd = BASE, silent = false) {
 function runInherit(cmd, cwd = BASE) {
   console.log(`$ ${cmd}`);
   execSync(cmd, { cwd, stdio: "inherit", env: getCommandEnv() });
+}
+
+function runArgs(cmd, args, cwd = BASE) {
+  const display = [cmd, ...args.map((a) => (a.includes(" ") ? `"${a}"` : a))].join(" ");
+  console.log(`$ ${display}`);
+  const result = spawnSync(cmd, args, { cwd, stdio: "inherit", env: getCommandEnv() });
+  if (result.status !== 0) {
+    const detail = result.error ? `: ${result.error.message}` : "";
+    throw new Error(`Command failed: ${display}${detail}`);
+  }
 }
 
 function hasCommand(cmd) {
@@ -948,7 +958,7 @@ function commitSync(options) {
     }
     runInherit("git add -A", repo.repoDir);
     try {
-      runInherit(`git commit -m \"${commitMessage.replace(/\"/g, "\\\\\"")}\"`, repo.repoDir);
+      runArgs("git", ["commit", "-m", commitMessage], repo.repoDir);
       const pushBranch = run("git rev-parse --abbrev-ref HEAD", repo.repoDir, true);
       runInherit(`git push origin ${pushBranch}`, repo.repoDir);
     } catch {
