@@ -508,8 +508,10 @@ function build() {
     const demoDir = path.join(base, "demos", demo.dir);
     runInherit(`npm link ${demo.links}`, demoDir);
     npmInstall(demoDir, true);
-    runInherit(`npm link ${demo.links}`, demoDir);
     fixRollupPlatformDeps(demoDir);
+    // Re-link AFTER all npm install operations — each npm install can
+    // replace symlinks with published registry versions from the lockfile.
+    runInherit(`npm link ${demo.links}`, demoDir);
     runInherit("npx tsc -b", demoDir);
     runInherit("npx vite build", demoDir);
   }
