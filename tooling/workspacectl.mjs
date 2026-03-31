@@ -584,14 +584,41 @@ function start(appName) {
     console.log("API build failed, continuing to function host startup.");
   }
 
-  const funcProc = spawn("npx", ["func", "start", "--port", "7071"], {
-    cwd: apiDir,
-    stdio: "inherit",
-    shell: true,
+  // ─── Auto-restart Functions host on local.settings.json change ───
+  const settingsPath = path.join(apiDir, "local.settings.json");
+  let funcProc = null;
+
+  function startFuncHost() {
+    if (funcProc) {
+      console.log("\n[workspacectl] Restarting Functions host (local.settings.json changed)...");
+      funcProc.kill("SIGTERM");
+    }
+    funcProc = spawn("npx", ["func", "start", "--port", "7071"], {
+      cwd: apiDir,
+      stdio: "inherit",
+      shell: true,
+    });
+    funcProc.on("exit", (code) => {
+      if (code !== null && code !== 0) {
+        console.log(`[workspacectl] Functions host exited with code ${code}`);
+      }
+    });
+  }
+
+  startFuncHost();
+
+  // Watch local.settings.json for changes — debounce to avoid double-restart
+  let restartTimer = null;
+  fs.watch(settingsPath, () => {
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      startFuncHost();
+      restartTimer = null;
+    }, 500);
   });
 
   const shutdown = () => {
-    funcProc.kill("SIGTERM");
+    if (funcProc) funcProc.kill("SIGTERM");
     process.exit(0);
   };
   process.on("SIGINT", shutdown);

@@ -20,6 +20,8 @@ interface ModelConfig {
   name: string;
   endpoint: string;
   apiType?: 'chat' | 'responses';
+  inputPer1M?: number;
+  outputPer1M?: number;
 }
 
 interface LLMProxyConfig {
@@ -80,7 +82,7 @@ async function llmModelsHandler(request: HttpRequest): Promise<HttpResponseInit>
   return {
     status: 200,
     jsonBody: {
-      models: config.models.map(m => ({ name: m.name, apiType: m.apiType || 'chat' })),
+      models: config.models.map(m => ({ name: m.name, apiType: m.apiType || 'chat', inputPer1M: m.inputPer1M, outputPer1M: m.outputPer1M })),
       default: config.defaultModel,
     },
     headers: { 'Content-Type': 'application/json' },
@@ -117,17 +119,34 @@ async function llmProxyChatHandler(request: HttpRequest): Promise<HttpResponseIn
   const targetUrl = buildTargetUrl(modelConfig);
 
   // Forward with server-side API key — never expose the key to the client
+  // Retry with exponential backoff on transient failures (network errors, 502/503/504)
+  const MAX_RETRIES = 3;
   let upstream: Response;
-  try {
-    upstream = await fetch(targetUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': config.apiKey,
-      },
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1))); // 1s, 2s
+    }
+    try {
+      upstream = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': config.apiKey,
+        },
+        body: JSON.stringify(body),
+      });
+      if (upstream.status === 502 || upstream.status === 503 || upstream.status === 504) {
+        lastErr = new Error(`Upstream returned ${upstream.status}`);
+        if (attempt < MAX_RETRIES - 1) continue;
+      }
+      break; // success or non-retryable status
+    } catch (err) {
+      lastErr = err;
+      if (attempt < MAX_RETRIES - 1) continue;
+    }
+  }
+  if (!upstream!) {
     return { status: 502, jsonBody: { error: 'Failed to reach upstream LLM endpoint' } };
   }
 
