@@ -5,9 +5,10 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { execSync, spawn, spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 
-const BASE = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const BASE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST_PATH = path.join(BASE, "tooling", "workspace-manifest.yaml");
 let cachedCommandEnv = null;
 
@@ -66,7 +67,8 @@ function runArgs(cmd, args, cwd = BASE) {
 
 function hasCommand(cmd) {
   try {
-    run(`command -v ${cmd}`, BASE, true);
+    const check = process.platform === "win32" ? `where ${cmd}` : `command -v ${cmd}`;
+    run(check, BASE, true);
     return true;
   } catch {
     return false;
@@ -229,11 +231,20 @@ function waitForPublishWorkflow(pkg, version, repoSlug, maxWaitSec) {
   const timeoutMs = maxWaitSec * 1000;
   console.log(`Waiting for ${pkg}@${version} in ${repoSlug} (timeout ${maxWaitSec}s)`);
   while (Date.now() - start < timeoutMs) {
-    const output = run(
-      `GH_PAGER=cat gh run list --repo "${repoSlug}" --workflow publish.yml --limit 5 --json status,conclusion,displayTitle --jq '.[] | select(.displayTitle | contains("${version}"))'`,
-      BASE,
-      true,
-    );
+    let output;
+    try {
+      const result = spawnSync("gh", [
+        "run", "list",
+        "--repo", repoSlug,
+        "--workflow", "publish.yml",
+        "--limit", "5",
+        "--json", "status,conclusion,displayTitle",
+        "--jq", `.[] | select(.displayTitle | contains("${version}"))`,
+      ], { cwd: BASE, stdio: ["ignore", "pipe", "pipe"], env: { ...getCommandEnv(), GH_PAGER: "cat" } });
+      output = result.stdout?.toString().trim() || "";
+    } catch {
+      output = "";
+    }
     if (output) {
       const row = JSON.parse(output.split("\n")[0]);
       if (row.conclusion === "success") {
@@ -244,7 +255,8 @@ function waitForPublishWorkflow(pkg, version, repoSlug, maxWaitSec) {
         throw new Error(`${pkg}@${version} workflow ${row.conclusion}`);
       }
     }
-    execSync("sleep 10");
+    // Cross-platform sleep
+    spawnSync(process.platform === "win32" ? "timeout" : "sleep", [process.platform === "win32" ? "/t" : "", "10"].filter(Boolean), { stdio: "ignore" });
     process.stdout.write(".");
   }
   process.stdout.write("\n");
@@ -624,7 +636,7 @@ function start(appName) {
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
 
-  execSync("sleep 2");
+  spawnSync(process.platform === "win32" ? "timeout" : "sleep", process.platform === "win32" ? ["/t", "2"] : ["2"], { stdio: "ignore" });
   runInherit("npm run dev", appDir);
 }
 
