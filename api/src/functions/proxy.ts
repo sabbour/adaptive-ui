@@ -1,4 +1,5 @@
 import { app, HttpRequest, HttpResponseInit } from '@azure/functions';
+import { DefaultAzureCredential } from '@azure/identity';
 import { writeFile, readFile, unlink, mkdtemp } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -6,6 +7,13 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
+
+// ─── Azure credential for workload identity fallback ───
+let _azureCredential: DefaultAzureCredential | null = null;
+function getAzureCredential(): DefaultAzureCredential {
+  if (!_azureCredential) _azureCredential = new DefaultAzureCredential();
+  return _azureCredential;
+}
 
 // ─── LLM Proxy ───
 // Server-side LLM proxy that injects API keys so they never reach the browser.
@@ -280,6 +288,63 @@ const HOP_HEADERS = new Set([
   'content-encoding', 'content-length',
 ]);
 
+// ─── ARM Proxy ───
+// Proxies ARM API calls. If the client sends an Authorization header (user token
+// from MSAL), it's forwarded as-is. Otherwise, falls back to workload identity
+// via DefaultAzureCredential (managed identity in SWA/AKS, az login locally).
+
+async function armProxyHandler(request: HttpRequest, url: URL): Promise<HttpResponseInit> {
+  const armPath = url.pathname.replace(/^\/api\/arm-proxy/, '') + url.search;
+  const targetUrl = 'https://management.azure.com' + armPath;
+
+  const headers: Record<string, string> = {};
+  request.headers.forEach((value: string, key: string) => {
+    const lower = key.toLowerCase();
+    if (lower !== 'host' && lower !== 'origin' && lower !== 'referer' && !HOP_HEADERS.has(lower)) {
+      headers[key] = value;
+    }
+  });
+
+  // If no user token, acquire one via workload identity / DefaultAzureCredential
+  if (!headers['Authorization'] && !headers['authorization']) {
+    try {
+      const credential = getAzureCredential();
+      const tokenResponse = await credential.getToken('https://management.azure.com/.default');
+      if (tokenResponse) {
+        headers['Authorization'] = `Bearer ${tokenResponse.token}`;
+      }
+    } catch (err) {
+      return {
+        status: 401,
+        jsonBody: {
+          error: 'No user token provided and workload identity is not available.',
+          details: err instanceof Error ? err.message : String(err),
+        },
+      };
+    }
+  }
+
+  const body = request.method !== 'GET' && request.method !== 'HEAD'
+    ? await request.text()
+    : undefined;
+
+  const upstream = await fetch(targetUrl, { method: request.method, headers, body });
+
+  const responseHeaders: Record<string, string> = {};
+  upstream.headers.forEach((value: string, key: string) => {
+    if (!HOP_HEADERS.has(key.toLowerCase())) {
+      responseHeaders[key] = value;
+    }
+  });
+
+  const responseBody = await upstream.arrayBuffer();
+  return {
+    status: upstream.status,
+    headers: responseHeaders,
+    body: new Uint8Array(responseBody),
+  };
+}
+
 async function proxyHandler(request: HttpRequest): Promise<HttpResponseInit> {
   const url = new URL(request.url);
 
@@ -303,6 +368,11 @@ async function proxyHandler(request: HttpRequest): Promise<HttpResponseInit> {
   // ─── Bicep compile ───
   if (url.pathname === '/api/bicep-compile' && request.method === 'POST') {
     return bicepCompileHandler(request);
+  }
+
+  // ─── ARM proxy (user token passthrough or workload identity fallback) ───
+  if (url.pathname.startsWith('/api/arm-proxy')) {
+    return armProxyHandler(request, url);
   }
 
   // ─── CORS proxy routes ───
