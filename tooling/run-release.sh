@@ -2,8 +2,26 @@
 set -e
 
 BASE="/mnt/c/Users/asabbour/Git/adaptive-ui"
-CORE_VERSION="1.1.3"
+BUMP="minor"
 
+echo "=== Phase 1: Bump and push core ==="
+cd "$BASE/adaptive-ui-framework/packs/core"
+npm version $BUMP --no-git-tag-version
+CORE_VERSION=$(node -p "require('./package.json').version")
+echo "Core version: $CORE_VERSION"
+cd "$BASE/adaptive-ui-framework"
+git add -A
+git commit -m "chore: bump to $CORE_VERSION"
+git tag "v$CORE_VERSION"
+git push origin main --tags
+echo "=== Done core v$CORE_VERSION ==="
+
+echo ""
+echo "=== Phase 1b: Wait for core publish ==="
+gh run list --repo sabbour/adaptive-ui-framework --limit 1
+
+echo ""
+echo "=== Phase 2: Bump and push packs ==="
 PACKS=(
   adaptive-ui-azure-pack
   adaptive-ui-github-pack
@@ -12,11 +30,10 @@ PACKS=(
   adaptive-ui-travel-data-pack
 )
 
-echo "=== Phase 1: Bump and push packs ==="
 for pack in "${PACKS[@]}"; do
   echo "--- Processing $pack ---"
   cd "$BASE/packs/$pack"
-  npm version patch --no-git-tag-version
+  npm version $BUMP --no-git-tag-version
   NEW_VER=$(node -p "require('./package.json').version")
   node -e "
     const fs = require('fs');
@@ -31,15 +48,6 @@ for pack in "${PACKS[@]}"; do
   git tag "v${NEW_VER}"
   git push origin main --tags
   echo "=== Done $pack v${NEW_VER} ==="
-done
-
-echo ""
-echo "=== Phase 2: Wait for pack publish workflows ==="
-for pack in "${PACKS[@]}"; do
-  cd "$BASE/packs/$pack"
-  NEW_VER=$(node -p "require('./package.json').version")
-  echo "Checking publish workflow for sabbour/$pack v${NEW_VER}..."
-  gh run list --repo "sabbour/$pack" --limit 1
 done
 
 echo ""
@@ -100,7 +108,7 @@ echo ""
 echo "=== Phase 4: Update parent submodule pointers ==="
 cd "$BASE"
 git add -A
-git commit -m "chore: update submodules after patch bump to core ${CORE_VERSION}"
+git commit -m "chore: update submodules after ${BUMP} bump to core ${CORE_VERSION}"
 git push origin main
 echo ""
-echo "=== Release flow completed ==="
+echo "=== Release flow completed: core v${CORE_VERSION} ==="
